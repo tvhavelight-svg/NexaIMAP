@@ -21,7 +21,13 @@ function initFirebase() {
 }
 
 function loadFromFirestore() {
-    if(!db) return;
+    if(!db) {
+        console.log('Firestore: db not ready');
+        initApp();
+        return;
+    }
+    
+    console.log('Firestore: Loading...');
     
     db.collection('state').doc('appState').get()
     .then(doc => {
@@ -40,21 +46,24 @@ function loadFromFirestore() {
                 if(defaultEmployee) currentUser = defaultEmployee;
             }
             
-            console.log('Loaded from Firestore:', jobs.length, 'jobs');
+            console.log('✓ Loaded from Firestore:', jobs.length, 'jobs');
         } else {
-            console.log('No data in Firestore, using local data');
+            console.log('No data in Firestore, saving initial state...');
             saveToFirestore();
+            initApp();
         }
-        initApp();
     })
     .catch(err => {
-        console.error('Error loading from Firestore:', err);
+        console.error('✗ Error loading from Firestore:', err);
         initApp();
     });
 }
 
 function saveToFirestore() {
-    if(!db) return;
+    if(!db) {
+        console.log('Firestore: db not ready, skipping save');
+        return;
+    }
     
     const state = {
         members: members,
@@ -64,9 +73,11 @@ function saveToFirestore() {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
     
+    console.log('Firestore: Saving', jobs.length, 'jobs...');
+    
     db.collection('state').doc('appState').set(state, { merge: true })
-    .then(() => console.log('Saved to Firestore'))
-    .catch(err => console.error('Error saving to Firestore:', err));
+    .then(() => console.log('✓ Saved to Firestore successfully'))
+    .catch(err => console.error('✗ Error saving to Firestore:', err));
 }
 
 // ==========================================
