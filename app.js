@@ -38,6 +38,12 @@ function loadFromFirestore() {
             jobs = data.jobs || [];
             archivedJobs = data.archivedJobs || [];
             
+            // Ensure admin user exists
+            const adminExists = members.some(m => m.name === 'admin');
+            if(!adminExists) {
+                members.unshift({ name: 'admin', role: 'Admin', allowed: [...PROCESS_KEYS], status: 'Available', mins: 0, forceStatus: null });
+            }
+            
             // Restore current user
             if(data.currentUserName) {
                 currentUser = members.find(m => m.name === data.currentUserName) || null;
@@ -328,14 +334,27 @@ function showAppForCurrentUser() {
     loginScreen.classList.remove('active');
     appScreen.style.display = 'block';
     
-    // Only show Admin button for Admin role
+    // Only show Admin/Reset buttons for Admin role
     if(currentUser.role === 'Admin') {
         document.getElementById('adminBtn').style.display = 'block';
+        document.getElementById('resetBtn').style.display = 'block';
     } else {
         document.getElementById('adminBtn').style.display = 'none';
+        document.getElementById('resetBtn').style.display = 'none';
     }
     
     initApp();
+}
+
+function resetAllData() {
+    const ok = confirm('รีเซทข้อมูลทั้งหมด? (ลบ jobs ทั้งหมด)');
+    if(!ok) return;
+    
+    jobs = [];
+    archivedJobs = [];
+    saveToFirestore();
+    alert('รีเซทสำเร็จ');
+    renderDashboard();
 }
 
 loginForm.addEventListener('submit', (e) => {
@@ -367,6 +386,8 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
     document.getElementById('usernameInput').value = '';
     document.getElementById('passwordInput').value = '';
 });
+
+document.getElementById('resetBtn').addEventListener('click', resetAllData);
 
 // Auto logout after 10 minutes of inactivity
 let inactivityTimer = null;
