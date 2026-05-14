@@ -30,6 +30,16 @@ function loadFromFirestore() {
             members = data.members || initialMembers;
             jobs = data.jobs || [];
             archivedJobs = data.archivedJobs || [];
+            
+            // Restore current user
+            if(data.currentUserName) {
+                currentUser = members.find(m => m.name === data.currentUserName) || null;
+            }
+            if(!currentUser) {
+                const defaultEmployee = members.find(m => m.role === 'Employee');
+                if(defaultEmployee) currentUser = defaultEmployee;
+            }
+            
             console.log('Loaded from Firestore:', jobs.length, 'jobs');
         } else {
             console.log('No data in Firestore, using local data');
@@ -50,6 +60,7 @@ function saveToFirestore() {
         members: members,
         jobs: jobs,
         archivedJobs: archivedJobs,
+        currentUserName: currentUser?.name || null,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
     
