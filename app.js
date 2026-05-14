@@ -27,10 +27,11 @@ function loadFromFirestore() {
         return;
     }
     
-    console.log('Firestore: Loading...');
+    console.log('Firestore: Loading with realtime listener...');
     
-    db.collection('state').doc('appState').get()
-    .then(doc => {
+    // Use onSnapshot for realtime sync
+    const unsubscribe = db.collection('state').doc('appState')
+    .onSnapshot(doc => {
         if(doc.exists) {
             const data = doc.data();
             members = data.members || initialMembers;
@@ -46,17 +47,30 @@ function loadFromFirestore() {
                 if(defaultEmployee) currentUser = defaultEmployee;
             }
             
-            console.log('✓ Loaded from Firestore:', jobs.length, 'jobs');
+            console.log('✓ Synced from Firestore:', jobs.length, 'jobs');
+            
+            // Re-render if app is already loaded
+            if(window.appReady) {
+                renderDashboard();
+                renderMyWork();
+                renderCalendar();
+            }
         } else {
             console.log('No data in Firestore, saving initial state...');
             saveToFirestore();
-            initApp();
         }
-    })
-    .catch(err => {
-        console.error('✗ Error loading from Firestore:', err);
-        initApp();
+    }, err => {
+        console.error('✗ Firestore listen error:', err);
     });
+    
+    // Store unsubscribe function
+    window.firestoreUnsubscribe = unsubscribe;
+    
+    // Mark app as ready after initial load
+    setTimeout(() => {
+        window.appReady = true;
+        initApp();
+    }, 1000);
 }
 
 function saveToFirestore() {
