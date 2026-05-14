@@ -6,10 +6,211 @@
     <title>NexaIMAP Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <nav class="navbar">
+            <div class="nav-brand">🌐 NexaIMAP</div>
+            <div class="nav-user">
+                <span id="currentUserDisplay">👤 Guest</span>
+                <button id="adminBtn" class="btn btn-outline" style="margin-left:1rem;display:none;">⚙️ Admin</button>
+                <button id="logoutBtn" class="btn btn-outline" style="margin-left:0.5rem;">Logout</button>
+                <button id="resetBtn" class="btn btn-outline" style="margin-left:0.5rem;display:none;">Reset</button>
+            </div>
+        </nav>
+        
+        <div class="tabs">
+            <button class="tab-btn active" data-target="dashboardPage">📊 Dashboard</button>
+            <button class="tab-btn" data-target="myWorkPage">📋 My Work</button>
+            <button class="tab-btn" data-target="calendarPage">📅 Calendar</button>
+            <button class="tab-btn" data-target="archivePage">📁 Archive</button>
+            <button class="tab-btn" data-target="summaryPage">📈 Summary</button>
+        </div>
+        
+        <div id="dashboardPage" class="page active">
+            <div class="dashboard-header">
+                <h2>📊 Dashboard</h2>
+                <button class="btn btn-primary" onclick="openModal('orderModal')">+ New Order</button>
+            </div>
+            
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-value" id="statAvail">0</div>
+                    <div class="stat-label">Available</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statBusy">0</div>
+                    <div class="stat-label">Busy</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statOffline">0</div>
+                    <div class="stat-label">Offline</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statJobs">0</div>
+                    <div class="stat-label">Active Jobs</div>
+                </div>
+            </div>
+            
+            <div class="dashboard-grid">
+                <div class="dashboard-section">
+                    <h3>👷 Employees</h3>
+                    <div class="members-grid" id="employeesGrid"></div>
+                </div>
+                <div class="dashboard-section">
+                    <h3>🔰 Officers</h3>
+                    <div class="members-grid" id="officersGrid"></div>
+                </div>
+                <div class="dashboard-section">
+                    <h3>⭐ Special Officers</h3>
+                    <div class="members-grid" id="specialOfficersGrid"></div>
+                </div>
+            </div>
+            
+            <div class="dashboard-section" id="adminJobsSidebar" style="display:none;">
+                <h3>📋 Active Jobs (Admin)</h3>
+                <div id="activeJobsList"></div>
+            </div>
+        </div>
+        
+        <div id="myWorkPage" class="page">
+            <h2>📋 My Work</h2>
+            <div id="myWorkList"></div>
+        </div>
+        
+        <div id="calendarPage" class="page">
+            <div class="calendar-header">
+                <h2>📅 Calendar</h2>
+                <div class="calendar-nav">
+                    <button id="calendarPrevBtn" class="btn btn-outline">◀</button>
+                    <span id="calendarTitle"></span>
+                    <button id="calendarNextBtn" class="btn btn-outline">▶</button>
+                    <button id="calendarTodayBtn" class="btn btn-outline">Today</button>
+                </div>
+            </div>
+            <div id="calendarList"></div>
+        </div>
+        
+        <div id="archivePage" class="page">
+            <h2>📁 Archive</h2>
+            <table id="archiveTable">
+                <thead>
+                    <tr>
+                        <th>Project</th>
+                        <th>Processes</th>
+                        <th>Images</th>
+                        <th>Team</th>
+                        <th>Completed</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        
+        <div id="summaryPage" class="page">
+            <h2>📈 Summary</h2>
+            <table id="summaryTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Role</th>
+                        <th>Jobs</th>
+                        <th>Images</th>
+                        <th>Mins</th>
+                        <th>Hours</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
     
-<!-- App Scripts -->
+    <!-- Order Modal -->
+    <div id="orderModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📝 New Order</h2>
+                <span class="close" onclick="closeModal('orderModal')">&times;</span>
+            </div>
+            <form id="orderForm">
+                <div class="form-group">
+                    <label>Year (BE)</label>
+                    <input type="text" id="orderYear" value="69" required>
+                </div>
+                <div class="form-group">
+                    <label>Order Number (Auto)</label>
+                    <input type="text" id="orderNum" value="0001">
+                </div>
+                <div class="form-group">
+                    <label>Satellite</label>
+                    <select id="orderSat" required>
+                        <option value="">-- Select --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Scene Count</label>
+                    <input type="number" id="orderImgCount" value="1" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label>Processes</label>
+                    <div id="processCheckboxes"></div>
+                </div>
+                <div id="estimatePreview" style="margin:1rem 0;padding:1rem;background:var(--bg2);border-radius:8px;">
+                    Estimated time: -
+                </div>
+                <div id="rateSummary" style="font-size:0.85rem;color:var(--text-muted);"></div>
+                <button type="submit" class="btn btn-primary">Create Order</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Order Confirm Modal -->
+    <div id="orderConfirmModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>✅ Confirm Order</h2>
+                <span class="close" onclick="closeModal('orderConfirmModal')">&times;</span>
+            </div>
+            <div id="ocBody"></div>
+            <div style="margin-top:1rem;">
+                <button id="ocConfirmBtn" class="btn btn-primary">Confirm</button>
+                <button class="btn btn-outline" onclick="closeModal('orderConfirmModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Profile Modal -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="pmName">Profile</h2>
+                <span class="close" onclick="closeModal('profileModal')">&times;</span>
+            </div>
+            <div id="pmBody"></div>
+        </div>
+    </div>
+    
+    <!-- Admin Modal -->
+    <div id="adminModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚙️ Admin Panel</h2>
+                <span class="close" onclick="closeModal('adminModal')">&times;</span>
+            </div>
+            <div id="adminPinSection">
+                <p>Enter PIN:</p>
+                <input type="password" id="adminPinInput" placeholder="PIN">
+                <button class="btn btn-primary" onclick="verifyAdminPin()">Verify</button>
+            </div>
+            <div id="adminControlsSection" style="display:none;">
+                <h3>Process Permissions</h3>
+                <div id="adminPermsGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Scripts -->
     <script src="firebase-init.js"></script>
-    <script src="app.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

@@ -61,12 +61,12 @@ window.archivedJobs = [];
 window.currentUser = { name: 'joy', role: 'Employee' };
 
 function initLocalMode() {
-    document.getElementById('loadingScreen').classList.remove('active');
-    document.getElementById('loginScreen').classList.remove('active');
-    document.getElementById('app').style.display = 'block';
-    document.getElementById('currentUserDisplay').textContent = '👤 JOY (Employee)';
-    document.getElementById('adminBtn').style.display = 'block';
-    document.getElementById('resetBtn').style.display = 'block';
+    if (document.getElementById('loadingScreen')) document.getElementById('loadingScreen').classList.remove('active');
+    if (document.getElementById('loginScreen')) document.getElementById('loginScreen').classList.remove('active');
+    if (document.getElementById('app')) document.getElementById('app').style.display = 'block';
+    if (document.getElementById('currentUserDisplay')) document.getElementById('currentUserDisplay').textContent = '👤 JOY (Employee)';
+    if (document.getElementById('adminBtn')) document.getElementById('adminBtn').style.display = 'block';
+    if (document.getElementById('resetBtn')) document.getElementById('resetBtn').style.display = 'block';
     
     if (typeof initApp === 'function') {
         initApp();

@@ -158,7 +158,7 @@ function addMonths(date, months) {
 
 function dayDiff(a, b) {
     var ms = 24 * 60 * 60 * 1000;
-    return Math.round((toStartOfDay(b) - toStartOfDay(a) / ms);
+    return Math.round((toStartOfDay(b) - toStartOfDay(a)) / ms);
 }
 
 function sameDay(a, b) {
