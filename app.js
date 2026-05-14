@@ -1,4 +1,64 @@
 // ==========================================
+// FIREBASE CONFIG
+// ==========================================
+const firebaseConfig = {
+    apiKey: "AIzaSyD0aZ-XXXXXXXXXXXXXXXXXXXXXXXXX",
+    authDomain: "nexaimap-997ff.firebaseapp.com",
+    projectId: "nexaimap-997ff",
+    storageBucket: "nexaimap-997ff.appspot.com",
+    messagingSenderId: "000000000000",
+    appId: "1:000000000000:web:0000000000000000000000"
+};
+
+let db;
+
+function initFirebase() {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    console.log('Firebase initialized');
+    
+    loadFromFirestore();
+}
+
+function loadFromFirestore() {
+    if(!db) return;
+    
+    db.collection('state').doc('appState').get()
+    .then(doc => {
+        if(doc.exists) {
+            const data = doc.data();
+            members = data.members || initialMembers;
+            jobs = data.jobs || [];
+            archivedJobs = data.archivedJobs || [];
+            console.log('Loaded from Firestore:', jobs.length, 'jobs');
+        } else {
+            console.log('No data in Firestore, using local data');
+            saveToFirestore();
+        }
+        initApp();
+    })
+    .catch(err => {
+        console.error('Error loading from Firestore:', err);
+        initApp();
+    });
+}
+
+function saveToFirestore() {
+    if(!db) return;
+    
+    const state = {
+        members: members,
+        jobs: jobs,
+        archivedJobs: archivedJobs,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    
+    db.collection('state').doc('appState').set(state, { merge: true })
+    .then(() => console.log('Saved to Firestore'))
+    .catch(err => console.error('Error saving to Firestore:', err));
+}
+
+// ==========================================
 // DATA & STATE
 // ==========================================
 const SATELLITE_SPECS = [
@@ -181,35 +241,10 @@ let calendarControlsBound = false;
 
 function saveAppState() {
     if(suppressStateSave) return;
-    const state = {
-        members,
-        jobs,
-        archivedJobs,
-        currentUserName: currentUser?.name || null
-    };
-    localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(state));
+    saveToFirestore();
 }
 
-function loadAppState() {
-    const raw = localStorage.getItem(APP_STORAGE_KEY);
-    if(!raw) return;
-
-    try {
-        const state = JSON.parse(raw);
-        if(Array.isArray(state.members) && Array.isArray(state.jobs) && Array.isArray(state.archivedJobs)) {
-            members = state.members;
-            jobs = state.jobs;
-            archivedJobs = state.archivedJobs;
-            if(state.currentUserName) {
-                currentUser = members.find(m => m.name === state.currentUserName) || null;
-            }
-        }
-    } catch (err) {
-        console.warn('Failed to load saved app state', err);
-    }
-}
-
-loadAppState();
+// loadAppState removed - using Firestore instead
 
 function normalizeMemberRoles() {
     members = members.map(member => {
@@ -1334,4 +1369,7 @@ function togglePerm(name, step, isChecked) {
     if(!isChecked) user.allowed = user.allowed.filter(s => s !== step);
     saveAppState();
 }
+
+// Initialize Firebase
+initFirebase();
 
