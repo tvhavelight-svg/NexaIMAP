@@ -69,6 +69,20 @@ function loadFromFirestore() {
     // Mark app as ready after initial load
     setTimeout(() => {
         window.appReady = true;
+        if(window.firestoreLoadedResolve) {
+            window.firestoreLoadedResolve();
+            firestoreLoaded = true;
+        }
+        
+        // Show app if user exists
+        if(currentUser) {
+            showAppForCurrentUser();
+        } else {
+            // Show login screen if no user
+            loginScreen.classList.add('active');
+            appScreen.style.display = 'none';
+        }
+        
         initApp();
     }, 1000);
 }
@@ -356,9 +370,39 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 
 document.getElementById('resetBtn').addEventListener('click', resetAllData);
 
-if(currentUser) {
-    showAppForCurrentUser();
+// Auto logout after 10 minutes of inactivity
+let inactivityTimer = null;
+const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+
+function resetInactivityTimer() {
+    if(inactivityTimer) clearTimeout(inactivityTimer);
+    if(currentUser) {
+        inactivityTimer = setTimeout(() => {
+            console.log('Auto logout after 10 minutes of inactivity');
+            currentUser = null;
+            saveToFirestore();
+            appScreen.style.display = 'none';
+            loginScreen.classList.add('active');
+            document.getElementById('usernameInput').value = '';
+            document.getElementById('passwordInput').value = '';
+        }, INACTIVITY_TIMEOUT);
+    }
 }
+
+// Reset timer on user activity
+['mousedown', 'keydown', 'scroll', 'touchstart'].forEach(event => {
+    document.addEventListener(event, resetInactivityTimer, { passive: true });
+});
+
+resetInactivityTimer();
+
+// Wait for Firestore to load before showing app (don't show login on refresh)
+let firestoreLoaded = false;
+window.firestoreLoadedResolve = null;
+
+window.waitForFirestore = new Promise(resolve => {
+    window.firestoreLoadedResolve = resolve;
+});
 
 window.addEventListener('beforeunload', () => {
     if(suppressStateSave) return;
