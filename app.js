@@ -260,6 +260,9 @@ const allSteps = [...PROCESS_KEYS];
 const empSteps = [...PROCESS_KEYS];
 
 const initialMembers = [
+    // Admin
+    { name: 'admin', role: 'Admin', allowed: [...PROCESS_KEYS], status: 'Available', mins: 0, forceStatus: null },
+    
     // Employees (7)
     { name: 'joy', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
     { name: 'bboy', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
@@ -324,18 +327,15 @@ function showAppForCurrentUser() {
     document.getElementById('currentUserDisplay').textContent = `👤 ${currentUser.name.toUpperCase()} (${currentUser.role})`;
     loginScreen.classList.remove('active');
     appScreen.style.display = 'block';
-    document.getElementById('adminBtn').style.display = 'block';
-    document.getElementById('resetBtn').style.display = 'block';
+    
+    // Only show Admin button for Admin role
+    if(currentUser.role === 'Admin') {
+        document.getElementById('adminBtn').style.display = 'block';
+    } else {
+        document.getElementById('adminBtn').style.display = 'none';
+    }
+    
     initApp();
-}
-
-function resetAllData() {
-    const ok = confirm('Reset all app data and reload?');
-    if(!ok) return;
-    suppressStateSave = true;
-    localStorage.clear();
-    sessionStorage.clear();
-    location.reload();
 }
 
 loginForm.addEventListener('submit', (e) => {
@@ -367,8 +367,6 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
     document.getElementById('usernameInput').value = '';
     document.getElementById('passwordInput').value = '';
 });
-
-document.getElementById('resetBtn').addEventListener('click', resetAllData);
 
 // Auto logout after 10 minutes of inactivity
 let inactivityTimer = null;
