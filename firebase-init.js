@@ -48,14 +48,14 @@ window.initialMembers = [
     { name: 'nine', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
     // Special Officer for QC:SENT
     { name: 'toom', role: 'Special Officer', allowed: ['QC:SENT'], status: 'Available', mins: 0, forceStatus: null },
-    // Officers can do all steps + be assigned as QC
-    { name: 'x', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'first', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'chain', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'pla', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'gib', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'nee', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'puki', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null }
+    // Officers - can do all steps + have QC permission
+    { name: 'x', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'first', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'chain', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'pla', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'gib', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'nee', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'puki', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null }
 ];
 
 window.members = JSON.parse(JSON.stringify(window.initialMembers));

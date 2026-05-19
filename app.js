@@ -281,14 +281,14 @@ const initialMembers = [
     // Special Officer for QC:SENT
     { name: 'toom', role: 'Special Officer', allowed: ['QC:SENT'], status: 'Available', mins: 0, forceStatus: null },
     
-    // Officers - can do all steps + be assigned as QC
-    { name: 'x', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'first', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'chain', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'pla', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'gib', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'nee', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'puki', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null }
+    // Officers - can do all steps + have QC permission
+    { name: 'x', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'first', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'chain', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'pla', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'gib', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'nee', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'puki', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null }
 ];
 
 let members = JSON.parse(JSON.stringify(initialMembers));
@@ -613,12 +613,16 @@ function findNextFreeStart(intervals, desiredStart, durationMins) {
 }
 
 function assignRoleTask(role, desiredStart, durationMins, excludeNames = [], requiredSteps = []) {
-    const candidates = members.filter(member =>
-        member.role === role &&
-        member.status !== 'Offline' &&
-        !excludeNames.includes(member.name) &&
-        (requiredSteps.length === 0 || requiredSteps.every(step => member.allowed.includes(step)))
-    );
+    const candidates = members.filter(member => {
+        if(member.role !== role || member.status === 'Offline' || excludeNames.includes(member.name)) return false;
+        
+        // ถ้ามี QC permission สามารถรับงาน QC ได้
+        if(member.allowed.includes('QC')) return true;
+        
+        // หรือต้องมีสิทธิ์ครอบคลุมทุก step ที่ต้องการ
+        if(requiredSteps.length === 0) return true;
+        return requiredSteps.every(step => member.allowed.includes(step));
+    });
 
     if(!candidates.length) return null;
 
@@ -1598,6 +1602,12 @@ function renderAdminPerms() {
             const checked = m.allowed.includes(s) ? 'checked' : '';
             return `<label style="display:inline-flex; align-items:center; gap:0.2rem; font-size:0.8rem; margin-right:0.5rem;"><input type="checkbox" value="${s}" ${checked} onchange="togglePerm('${m.name}', '${s}', this.checked)"> ${s}</label>`;
         }).join('');
+        
+        // เพิ่ม QC permission สำหรับ Officer/Special Officer
+        if(m.role === 'Officer' || m.role === 'Special Officer') {
+            const qcChecked = m.allowed.includes('QC') ? 'checked' : '';
+            options += `<label style="display:inline-flex; align-items:center; gap:0.2rem; font-size:0.8rem; margin-right:0.5rem; margin-left:1rem; background:#4a5568; padding:0.2rem 0.5rem; border-radius:4px;"><input type="checkbox" value="QC" ${qcChecked} onchange="togglePerm('${m.name}', 'QC', this.checked)"> <strong>QC</strong></label>`;
+        }
         
         grid.innerHTML += `
             <div style="background:var(--surface); padding:1rem; border:1px solid var(--border); border-radius:8px; margin-bottom:0.5rem;">
