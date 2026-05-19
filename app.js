@@ -1210,7 +1210,9 @@ function setupOrderForm() {
             finalDeadline: officerTask.end.toISOString(),
             notes: [],
             createdAt: createdAt.toISOString(),
-            status: 'ordered'
+            status: 'ordered',
+            rawdataReady: document.querySelector('input[name="rawdataReady"]:checked')?.value || 'No',
+            approver: document.getElementById('orderApprover').value
         };
 
         showOrderConfirm(draftJob);
@@ -1227,6 +1229,8 @@ function showOrderConfirm(draft) {
             <p><strong>Officer QC:</strong> <span class="status-badge available">${draft.qcOfficer || '-'}</span></p>
             <p><strong>Special Officer:</strong> <span class="status-badge available">${draft.specialOfficer || '-'}</span></p>
             <p><strong>Queue Position:</strong> ${draft.queuePosition}</p>
+            <p><strong>วาง Rawdata แล้ว:</strong> <span class="status-badge ${draft.rawdataReady === 'Yes' ? 'available' : 'busy'}">${draft.rawdataReady}</span></p>
+            <p><strong>ผู้อนุมัติ:</strong> <span class="status-badge available">${draft.approver || '-'}</span></p>
         </div>
         <p><strong>Selected Processes:</strong> ${draft.selectedProcesses.join(', ')}</p>
         <p><strong>Estimated Minutes:</strong> ${formatMins(draft.estimatedMinutes)} mins</p>
@@ -1242,8 +1246,9 @@ function showOrderConfirm(draft) {
         document.getElementById('orderYear').value = '69';
         document.getElementById('orderNum').value = '0001';
         updateRateAvailability();
-        alert('Order Created!');
-        document.querySelector('[data-target="dashboardPage"]').click();
+        
+        // Show summary/ใบสรุป
+        showOrderSummary(draft);
     };
     
     openModal('orderConfirmModal');

@@ -176,13 +176,35 @@
                                 </div>
                             </div>
 
-                            <!-- 7. Report -->
+<!-- 7. Report -->
                             <div class="form-group">
                                 <label>Report</label>
                                 <div class="radio-group">
                                     <label><input type="radio" name="reportType" value="REPORT" required> Report</label>
                                     <label><input type="radio" name="reportType" value="None"> None</label>
                                 </div>
+                            </div>
+
+                            <!-- 8. วาง Rawdata แล้ว -->
+                            <div class="form-group">
+                                <label>วาง Rawdata แล้ว</label>
+                                <div class="radio-group">
+                                    <label><input type="radio" name="rawdataReady" value="Yes" required> Yes</label>
+                                    <label><input type="radio" name="rawdataReady" value="No"> No</label>
+                                </div>
+                            </div>
+
+                            <!-- 9. ผู้อนุมัติ (Sale) -->
+                            <div class="form-group">
+                                <label>ผู้อนุมัติ (Approver)</label>
+                                <select id="orderApprover" required>
+                                    <option value="" disabled selected>-- เลือกผู้อนุมัติ --</option>
+                                    <option value="Sale 1">Sale 1</option>
+                                    <option value="Sale 2">Sale 2</option>
+                                    <option value="Sale 3">Sale 3</option>
+                                    <option value="Sale 4">Sale 4</option>
+                                    <option value="Sale 5">Sale 5</option>
+                                </select>
                             </div>
 
                         </div>
