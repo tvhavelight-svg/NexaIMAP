@@ -591,7 +591,8 @@ function assignRoleTask(role, desiredStart, durationMins, excludeNames = []) {
     const candidates = members.filter(member =>
         member.role === role &&
         member.status !== 'Offline' &&
-        !excludeNames.includes(member.name)
+        !excludeNames.includes(member.name) &&
+        member.allowed.length > 0  // ต้องมีสิทธิ์อย่างน้อย 1 อย่าง
     );
 
     if(!candidates.length) return null;
