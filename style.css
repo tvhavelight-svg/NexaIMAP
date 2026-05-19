@@ -138,6 +138,8 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); border-color: tr
 .status-badge.available { background: var(--green); color: var(--green-text); }
 .status-badge.busy { background: var(--yellow); color: var(--yellow-text); }
 .status-badge.offline { background: var(--red); color: var(--red-text); }
+.status-badge.done { background: var(--green); color: var(--green-text); }
+.status-badge.pending { background: var(--yellow); color: var(--yellow-text); }
 
 /* Admin Controls on Card */
 .admin-card-controls { display: flex; gap: 0.5rem; margin-top: 0.5rem; }

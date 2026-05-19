@@ -793,6 +793,8 @@ function renderMyWork() {
 
     myJobs.forEach((job, index) => {
         let notesHtml = (job.notes || []).map(n => `<div class="work-note">โน้ต: ${n}</div>`).join('');
+        let qcFeedbackHtml = (job.qcFeedback || []).map(f => `<div class="work-note" style="border-left-color:var(--red-text);">QC ไม่ผ่าน: ${f.message} (${new Date(f.date).toLocaleString()})</div>`).join('');
+        
         const roleLabel = currentUser.role === 'Employee'
             ? 'Worker'
             : currentUser.role === 'Officer'
@@ -804,14 +806,44 @@ function renderMyWork() {
                 ? (job.qcMins || job.qcImageMins || 0)
                 : (job.qcSentMins || job.specialMins || 0);
         
+        const statusLabel = getStatusLabel(job.status);
+        const statusColor = getStatusColor(job.status);
+        
+        let actionButtons = '';
+        if(currentUser.role === 'Employee') {
+            if(job.status === 'ordered') {
+                actionButtons = `<button class="btn btn-primary" onclick="startWorking('${job.id}')">▶ เริ่มทำงาน</button>`;
+            } else if(job.status === 'working') {
+                actionButtons = `<button class="btn btn-primary" onclick="submitToQC('${job.id}')">📤 ส่งให้ QC ตรวจ</button>`;
+            } else if(job.status === 'special_check') {
+                actionButtons = `<span style="color:var(--green-text);">✓ งานอนุมัติแล้ว รอแจ้งผู้สั่งงาน</span>`;
+            } else if(job.status === 'completed') {
+                actionButtons = `<span style="color:var(--text-muted);">งานเสร็จสิ้น</span>`;
+            }
+        } else if(currentUser.role === 'Officer') {
+            if(job.status === 'qc_check') {
+                actionButtons = `
+                    <button class="btn btn-primary" onclick="qcPass('${job.id}')">✅ ผ่าน QC</button>
+                    <button class="btn btn-outline" onclick="qcFail('${job.id}')" style="color:var(--red-text);">❌ ไม่ผ่าน</button>
+                `;
+            }
+        } else if(currentUser.role === 'Special Officer') {
+            if(job.status === 'special_check') {
+                actionButtons = `
+                    <button class="btn btn-primary" onclick="specialApprove('${job.id}')">✅ Approve</button>
+                `;
+            }
+        }
+        
         list.innerHTML += `
             <div class="work-item">
                 <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
                     <h3>${job.name}</h3>
-                    <span class="status-badge busy">Deadline: ${new Date(job.finalDeadline || job.deadline).toLocaleDateString()}</span>
+                    <span class="status-badge ${statusColor}">${statusLabel}</span>
                 </div>
                 <p><strong>Role:</strong> ${roleLabel} | <strong>Minutes:</strong> ${formatMins(mins)} | <strong>Images:</strong> ${job.imgCount}</p>
                 <p><strong>Steps:</strong> ${job.steps.join(', ')}</p>
+                ${qcFeedbackHtml}
                 ${notesHtml}
                 
                 <div class="path-inputs" id="paths-${job.id}">
@@ -1177,7 +1209,8 @@ function setupOrderForm() {
             deadline: officerTask.end.toISOString(),
             finalDeadline: officerTask.end.toISOString(),
             notes: [],
-            createdAt: createdAt.toISOString()
+            createdAt: createdAt.toISOString(),
+            status: 'ordered'
         };
 
         showOrderConfirm(draftJob);
@@ -1281,6 +1314,85 @@ function finishJob(index) {
     normalizeQueuePositions();
     saveAppState();
     renderDashboard();
+}
+
+// Workflow Transitions
+function startWorking(jobId) {
+    const job = findJobById(jobId);
+    if(job) {
+        job.status = 'working';
+        job.workerStartAt = new Date().toISOString();
+        saveAppState();
+        renderMyWork();
+    }
+}
+
+function submitToQC(jobId) {
+    const job = findJobById(jobId);
+    if(job) {
+        job.status = 'qc_check';
+        job.submittedToQCAt = new Date().toISOString();
+        saveAppState();
+        renderMyWork();
+    }
+}
+
+function qcPass(jobId) {
+    const job = findJobById(jobId);
+    if(job) {
+        job.status = 'special_check';
+        job.qcPassedAt = new Date().toISOString();
+        saveAppState();
+        renderMyWork();
+    }
+}
+
+function qcFail(jobId) {
+    const job = findJobById(jobId);
+    if(job) {
+        job.status = 'working';
+        job.returnedByQCAt = new Date().toISOString();
+        job.qcFeedback = job.qcFeedback || [];
+        job.qcFeedback.push({ date: new Date().toISOString(), message: 'QC ไม่ผ่าน กรุณาแก้ไข' });
+        saveAppState();
+        renderMyWork();
+    }
+}
+
+function specialApprove(jobId) {
+    const job = findJobById(jobId);
+    if(job) {
+        job.status = 'completed';
+        job.specialApprovedAt = new Date().toISOString();
+        job.completedAt = new Date().toISOString();
+        archivedJobs.push(job);
+        jobs = jobs.filter(j => j.id !== jobId);
+        normalizeQueuePositions();
+        saveAppState();
+        renderMyWork();
+    }
+}
+
+function getStatusLabel(status) {
+    const labels = {
+        'ordered': 'รอเริ่มงาน',
+        'working': 'กำลังทำ',
+        'qc_check': 'รอ QC ตรวจ',
+        'special_check': 'รอ Special อนุมัติ',
+        'completed': 'เสร็จสิ้น'
+    };
+    return labels[status] || status;
+}
+
+function getStatusColor(status) {
+    const colors = {
+        'ordered': 'pending',
+        'working': 'busy',
+        'qc_check': 'available',
+        'special_check': 'available',
+        'completed': 'done'
+    };
+    return colors[status] || 'available';
 }
 
 function deleteJob(index) {
