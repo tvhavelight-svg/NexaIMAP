@@ -269,14 +269,14 @@ const initialMembers = [
     // Admin
     { name: 'admin', role: 'Admin', allowed: [...PROCESS_KEYS], status: 'Available', mins: 0, forceStatus: null },
     
-    // Employees (7)
-    { name: 'joy', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'bboy', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'oil', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'june', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'phaifah', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'aunaun', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'nine', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
+    // Employees (7) - เริ่มไม่มีสิทธิ์ ต้องติ้กใน Manage Permissions ก่อนถึงจะได้งาน
+    { name: 'joy', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'bboy', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'oil', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'june', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'phaifah', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'aunaun', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'nine', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
     
     // Officers (8)
     { name: 'toom', role: 'Special Officer', allowed: ['QC:SENT'], status: 'Available', mins: 0, forceStatus: null },
