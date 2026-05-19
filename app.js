@@ -37,6 +37,14 @@ function loadFromFirestore() {
             members = data.members || initialMembers;
             jobs = data.jobs || [];
             archivedJobs = data.archivedJobs || [];
+
+            // Backfill officer defaults (do not override non-empty custom settings).
+            members = members.map(member => {
+                if(member.role !== 'Officer') return member;
+                const allowed = Array.isArray(member.allowed) ? member.allowed : [];
+                if(allowed.length > 0) return { ...member, allowed };
+                return { ...member, allowed: ['QC', ...PROCESS_KEYS] };
+            });
             
             // Ensure admin user exists
             const adminExists = members.some(m => m.name === 'admin');
@@ -281,14 +289,14 @@ const initialMembers = [
     // Special Officer for QC:SENT
     { name: 'toom', role: 'Special Officer', allowed: ['QC:SENT'], status: 'Available', mins: 0, forceStatus: null },
     
-    // Officers - start with no permissions; must be ticked in Manage Permissions.
-    { name: 'x', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'first', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'chain', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'pla', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'gib', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'nee', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'puki', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null }
+    // Officers - default to all permissions + QC.
+    { name: 'x', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'first', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'chain', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'pla', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'gib', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'nee', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'puki', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null }
 ];
 
 let members = JSON.parse(JSON.stringify(initialMembers));
@@ -1595,16 +1603,17 @@ function renderAdminPerms() {
     const grid = document.getElementById('adminPermsGrid');
     grid.innerHTML = '';
     members.forEach(m => {
-        let options = allSteps.map(s => {
-            const checked = m.allowed.includes(s) ? 'checked' : '';
+        const allowed = Array.isArray(m.allowed) ? m.allowed : [];
+        const keys =
+            m.role === 'Officer' ? ['QC', ...allSteps] :
+            m.role === 'Special Officer' ? ['QC:SENT'] :
+            m.role === 'Admin' ? ['QC', 'QC:SENT', ...allSteps] :
+            allSteps;
+
+        let options = keys.map(s => {
+            const checked = allowed.includes(s) ? 'checked' : '';
             return `<label style="display:inline-flex; align-items:center; gap:0.2rem; font-size:0.8rem; margin-right:0.5rem;"><input type="checkbox" value="${s}" ${checked} onchange="togglePerm('${m.name}', '${s}', this.checked)"> ${s}</label>`;
         }).join('');
-        
-        // เพิ่ม QC permission สำหรับ Officer/Special Officer
-        if(m.role === 'Officer' || m.role === 'Special Officer') {
-            const qcChecked = m.allowed.includes('QC') ? 'checked' : '';
-            options += `<label style="display:inline-flex; align-items:center; gap:0.2rem; font-size:0.8rem; margin-right:0.5rem; margin-left:1rem; background:#4a5568; padding:0.2rem 0.5rem; border-radius:4px;"><input type="checkbox" value="QC" ${qcChecked} onchange="togglePerm('${m.name}', 'QC', this.checked)"> <strong>QC</strong></label>`;
-        }
         
         grid.innerHTML += `
             <div style="background:var(--surface); padding:1rem; border:1px solid var(--border); border-radius:8px; margin-bottom:0.5rem;">
