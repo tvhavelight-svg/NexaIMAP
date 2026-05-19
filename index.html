@@ -185,16 +185,6 @@
                                 </div>
                             </div>
 
-                            <!-- 8. วาง Rawdata แล้ว -->
-                            <div class="form-group">
-                                <label>วาง Rawdata แล้ว</label>
-                                <select name="rawdataReady" id="rawdataReady" required style="width:100%; padding:0.8rem; border-radius:8px; border:1px solid var(--border);">
-                                    <option value="">-- เลือก --</option>
-                                    <option value="Yes">Yes</option>
-                                    <option value="No">No</option>
-                                </select>
-                            </div>
-
                             <!-- 9. ผู้อนุมัติ (Sale) -->
                             <div class="form-group">
                                 <label>ผู้อนุมัติ (Approver)</label>
@@ -207,6 +197,15 @@
                                     <option value="Sale 5">Sale 5</option>
                                 </select>
                             </div>
+
+                        <!-- 8. วาง Rawdata แล้ว -->
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <label>วาง Rawdata แล้ว</label>
+                            <div class="radio-group" style="flex-direction: row; gap: 1rem;">
+                                <label style="background: var(--surface); padding: 0.8rem 1.5rem; border-radius: 8px; border: 2px solid var(--border); flex: 1; text-align: center;"><input type="radio" name="rawdataReady" value="Yes" style="margin-right: 0.5rem;"> Yes</label>
+                                <label style="background: var(--surface); padding: 0.8rem 1.5rem; border-radius: 8px; border: 2px solid var(--border); flex: 1; text-align: center;"><input type="radio" name="rawdataReady" value="No" style="margin-right: 0.5rem;"> No</label>
+                            </div>
+                        </div>
 
                         </div>
                         <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem; padding: 1rem; font-size: 1.1rem;">คำนวณและสุ่มผู้ปฏิบัติงาน</button>
