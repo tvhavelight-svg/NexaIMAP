@@ -269,26 +269,26 @@ const initialMembers = [
     // Admin
     { name: 'admin', role: 'Admin', allowed: [...PROCESS_KEYS], status: 'Available', mins: 0, forceStatus: null },
     
-    // Employees - can do all steps
-    { name: 'joy', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'bboy', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'oil', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'june', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'phaifah', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'aunaun', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'nine', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
+    // Employees (7) - start with no permissions; must be ticked in Manage Permissions.
+    { name: 'joy', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'bboy', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'oil', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'june', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'phaifah', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'aunaun', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'nine', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
     
     // Special Officer for QC:SENT
     { name: 'toom', role: 'Special Officer', allowed: ['QC:SENT'], status: 'Available', mins: 0, forceStatus: null },
     
-    // Officers - can do all steps + have QC permission
-    { name: 'x', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'first', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'chain', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'pla', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'gib', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'nee', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'puki', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null }
+    // Officers - start with no permissions; must be ticked in Manage Permissions.
+    { name: 'x', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'first', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'chain', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'pla', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'gib', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'nee', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'puki', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null }
 ];
 
 let members = JSON.parse(JSON.stringify(initialMembers));
@@ -613,15 +613,12 @@ function findNextFreeStart(intervals, desiredStart, durationMins) {
 }
 
 function assignRoleTask(role, desiredStart, durationMins, excludeNames = [], requiredSteps = []) {
+    const needed = Array.isArray(requiredSteps) ? requiredSteps.filter(Boolean) : [];
     const candidates = members.filter(member => {
         if(member.role !== role || member.status === 'Offline' || excludeNames.includes(member.name)) return false;
-        
-        // ถ้ามี QC permission สามารถรับงาน QC ได้
-        if(member.allowed.includes('QC')) return true;
-        
-        // หรือต้องมีสิทธิ์ครอบคลุมทุก step ที่ต้องการ
-        if(requiredSteps.length === 0) return true;
-        return requiredSteps.every(step => member.allowed.includes(step));
+        if(!Array.isArray(member.allowed) || member.allowed.length === 0) return false; // must be ticked
+        if(needed.length === 0) return true;
+        return needed.every(step => member.allowed.includes(step));
     });
 
     if(!candidates.length) return null;
