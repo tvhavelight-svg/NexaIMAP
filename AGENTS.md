@@ -29,6 +29,16 @@ Job management web app with Firebase Firestore real-time sync.
 2. GitHub Pages auto-deploys from `main` branch
 3. URL: https://tvhavelight-svg.github.io/NexaIMAP/
 
+## Workflow System
+- Status flow: `ordered` → `working` → `qc_check` → `special_check` → `completed`
+- Action buttons shown based on current user role and job status
+
+## Permission System (Critical)
+- Employees start with empty `allowed: []` array in Firestore
+- Must check/assign permissions in **Manage Permissions** to receive jobs
+- `assignRoleTask()` in app.js filters by `member.allowed.length > 0` - if no permissions, won't get assigned
+- This prevents assigning jobs to unchecked workers
+
 ## Firestore Structure
 - Collection: `state` / Doc: `appState`
 - Fields: `members`, `jobs`, `archivedJobs`, `currentUserName`

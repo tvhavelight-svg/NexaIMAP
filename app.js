@@ -269,7 +269,7 @@ const initialMembers = [
     // Admin
     { name: 'admin', role: 'Admin', allowed: [...PROCESS_KEYS], status: 'Available', mins: 0, forceStatus: null },
     
-    // Employees (7) - เริ่มไม่มีสิทธิ์ ต้องติ้กใน Manage Permissions ก่อนถึงจะได้งาน
+    // Employees (7) - start with no permissions; must be ticked in Manage Permissions.
     { name: 'joy', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
     { name: 'bboy', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
     { name: 'oil', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
@@ -278,15 +278,17 @@ const initialMembers = [
     { name: 'aunaun', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
     { name: 'nine', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
     
-    // Officers (8)
+    // Special Officer for QC:SENT
     { name: 'toom', role: 'Special Officer', allowed: ['QC:SENT'], status: 'Available', mins: 0, forceStatus: null },
+    
+    // Officers - start with no permissions; must be ticked in Manage Permissions.
     { name: 'x', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
     { name: 'first', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'chain', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'pla', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'gib', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'nee', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'puki', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null }
+    { name: 'chain', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'pla', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'gib', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'nee', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'puki', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null }
 ];
 
 let members = JSON.parse(JSON.stringify(initialMembers));
@@ -457,6 +459,7 @@ function recalculateMembers() {
 
 function queueWorker(step, excludeName = null, isQC = false) {
     let candidates = members.filter(m => 
+        m.role === 'Employee' &&
         m.status !== 'Offline' && 
         m.allowed.includes(step) &&
         m.name !== excludeName // No self-QC
@@ -476,6 +479,28 @@ function queueWorker(step, excludeName = null, isQC = false) {
     if(!candidates.length) return null;
 
     // Tie-breaker logic: sort by mins ASC, then random if equal
+    candidates.sort((a, b) => {
+        if(a.mins === b.mins) return Math.random() - 0.5;
+        return a.mins - b.mins;
+    });
+
+    return candidates[0].name;
+}
+
+function queueWorkerForSteps(steps, excludeName = null) {
+    const requiredSteps = Array.isArray(steps) ? steps.filter(Boolean) : [];
+    if(requiredSteps.length === 0) return null;
+
+    let candidates = members.filter(member =>
+        member.role === 'Employee' &&
+        member.status === 'Available' &&
+        member.status !== 'Offline' &&
+        member.name !== excludeName &&
+        requiredSteps.every(step => member.allowed.includes(step))
+    );
+
+    if(!candidates.length) return null;
+
     candidates.sort((a, b) => {
         if(a.mins === b.mins) return Math.random() - 0.5;
         return a.mins - b.mins;
@@ -587,13 +612,14 @@ function findNextFreeStart(intervals, desiredStart, durationMins) {
     return nextStart;
 }
 
-function assignRoleTask(role, desiredStart, durationMins, excludeNames = []) {
-    const candidates = members.filter(member =>
-        member.role === role &&
-        member.status !== 'Offline' &&
-        !excludeNames.includes(member.name) &&
-        member.allowed.length > 0  // ต้องมีสิทธิ์อย่างน้อย 1 อย่าง
-    );
+function assignRoleTask(role, desiredStart, durationMins, excludeNames = [], requiredSteps = []) {
+    const needed = Array.isArray(requiredSteps) ? requiredSteps.filter(Boolean) : [];
+    const candidates = members.filter(member => {
+        if(member.role !== role || member.status === 'Offline' || excludeNames.includes(member.name)) return false;
+        if(!Array.isArray(member.allowed) || member.allowed.length === 0) return false; // must be ticked
+        if(needed.length === 0) return true;
+        return needed.every(step => member.allowed.includes(step));
+    });
 
     if(!candidates.length) return null;
 
@@ -1152,9 +1178,12 @@ function setupOrderForm() {
             return;
         }
 
-        // Find primary worker (based on first worker step)
-        let worker = queueWorker(wSteps[0]);
-        if(!worker) { alert(`No Available worker found for ${wSteps[0]}`); return; }
+        // Find primary worker (must have permissions for all selected steps)
+        let worker = queueWorkerForSteps(wSteps);
+        if(!worker) {
+            alert('No Available worker found (missing permissions for selected steps)');
+            return;
+        }
 
         // Agent.md logic: estimatedMinutes = sum(process time per scene) * scene count.
         const estimatedMinutes = calculateStepsMins(satellite, selectedSteps, imgCount);
@@ -1167,7 +1196,7 @@ function setupOrderForm() {
         const combinedMins = qcImageMins + SPECIAL_OFFICER_SENT_MINUTES;
         const officerStart = moveToNextWorkday(addWorkingDays(workerDeadline, 1));
         const combinedEnd = addMinutes(officerStart, combinedMins);
-        const officerTask = assignRoleTask('Officer', officerStart, combinedMins, [worker]);
+        const officerTask = assignRoleTask('Officer', officerStart, combinedMins, [worker], selectedSteps);
         if(!officerTask) {
             alert('No available Officer found for image QC');
             return;
@@ -1571,6 +1600,12 @@ function renderAdminPerms() {
             return `<label style="display:inline-flex; align-items:center; gap:0.2rem; font-size:0.8rem; margin-right:0.5rem;"><input type="checkbox" value="${s}" ${checked} onchange="togglePerm('${m.name}', '${s}', this.checked)"> ${s}</label>`;
         }).join('');
         
+        // เพิ่ม QC permission สำหรับ Officer/Special Officer
+        if(m.role === 'Officer' || m.role === 'Special Officer') {
+            const qcChecked = m.allowed.includes('QC') ? 'checked' : '';
+            options += `<label style="display:inline-flex; align-items:center; gap:0.2rem; font-size:0.8rem; margin-right:0.5rem; margin-left:1rem; background:#4a5568; padding:0.2rem 0.5rem; border-radius:4px;"><input type="checkbox" value="QC" ${qcChecked} onchange="togglePerm('${m.name}', 'QC', this.checked)"> <strong>QC</strong></label>`;
+        }
+        
         grid.innerHTML += `
             <div style="background:var(--surface); padding:1rem; border:1px solid var(--border); border-radius:8px; margin-bottom:0.5rem;">
                 <strong>${m.name} (${m.role})</strong><br>
@@ -1589,4 +1624,3 @@ function togglePerm(name, step, isChecked) {
 
 // Initialize Firebase
 initFirebase();
-
