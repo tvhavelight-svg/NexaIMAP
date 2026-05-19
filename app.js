@@ -611,12 +611,12 @@ function findNextFreeStart(intervals, desiredStart, durationMins) {
     return nextStart;
 }
 
-function assignRoleTask(role, desiredStart, durationMins, excludeNames = []) {
+function assignRoleTask(role, desiredStart, durationMins, excludeNames = [], requiredSteps = []) {
     const candidates = members.filter(member =>
         member.role === role &&
         member.status !== 'Offline' &&
         !excludeNames.includes(member.name) &&
-        member.allowed.length > 0  // ต้องมีสิทธิ์อย่างน้อย 1 อย่าง
+        (requiredSteps.length === 0 || requiredSteps.every(step => member.allowed.includes(step)))
     );
 
     if(!candidates.length) return null;
@@ -1194,7 +1194,7 @@ function setupOrderForm() {
         const combinedMins = qcImageMins + SPECIAL_OFFICER_SENT_MINUTES;
         const officerStart = moveToNextWorkday(addWorkingDays(workerDeadline, 1));
         const combinedEnd = addMinutes(officerStart, combinedMins);
-        const officerTask = assignRoleTask('Officer', officerStart, combinedMins, [worker]);
+        const officerTask = assignRoleTask('Officer', officerStart, combinedMins, [worker], selectedSteps);
         if(!officerTask) {
             alert('No available Officer found for image QC');
             return;
