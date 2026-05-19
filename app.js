@@ -1211,7 +1211,7 @@ function setupOrderForm() {
             notes: [],
             createdAt: createdAt.toISOString(),
             status: 'ordered',
-            rawdataReady: document.querySelector('input[name="rawdataReady"]:checked')?.value || 'No',
+            rawdataReady: document.getElementById('rawdataReady')?.value || 'No',
             approver: document.getElementById('orderApprover').value
         };
 

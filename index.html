@@ -188,10 +188,11 @@
                             <!-- 8. วาง Rawdata แล้ว -->
                             <div class="form-group">
                                 <label>วาง Rawdata แล้ว</label>
-                                <div class="radio-group">
-                                    <label><input type="radio" name="rawdataReady" value="Yes" required> Yes</label>
-                                    <label><input type="radio" name="rawdataReady" value="No"> No</label>
-                                </div>
+                                <select name="rawdataReady" id="rawdataReady" required style="width:100%; padding:0.8rem; border-radius:8px; border:1px solid var(--border);">
+                                    <option value="">-- เลือก --</option>
+                                    <option value="Yes">Yes</option>
+                                    <option value="No">No</option>
+                                </select>
                             </div>
 
                             <!-- 9. ผู้อนุมัติ (Sale) -->
