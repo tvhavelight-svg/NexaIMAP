@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexaIMAP Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="overlay active">
+        <div class="login-card">
+            <div class="login-logo pulse">
+                <div class="logo-dot"></div>
+                <h1>NexaIMAP</h1>
+            </div>
+            <p>Welcome back, please login.</p>
+            <form id="loginForm">
+                <input type="text" id="usernameInput" placeholder="Username (e.g. joy, toom)" required>
+                <input type="password" id="passwordInput" placeholder="Password (1234)" required>
+                <button type="submit" class="btn btn-primary">Login</button>
+            </form>
+            <div id="loginError" class="error-msg"></div>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app" style="display: none;">
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="logo">
+                <div class="logo-dot pulse"></div>
+                <span>NexaIMAP</span>
+            </div>
+            <div class="user-controls">
+                <span id="currentUserDisplay" class="user-name"></span>
+<button id="adminBtn" class="btn btn-outline" style="display:none;">Admin</button>
+                <button id="resetBtn" class="btn btn-outline" style="display:none;">Reset Data</button>
+                <button id="logoutBtn" class="btn btn-outline">Logout</button>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="tabs">
+            <button class="tab-btn active" data-target="dashboardPage">Dashboard</button>
+            <button class="tab-btn" data-target="myWorkPage">งานของฉัน</button>
+            <button class="tab-btn" data-target="orderPage">สั่งงาน</button>
+            <button class="tab-btn" data-target="calendarPage">Calendar</button>
+            <button class="tab-btn" data-target="archivePage">Archive</button>
+            <button class="tab-btn" data-target="summaryPage">Summary</button>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="content">
+            
+            <!-- Page: Dashboard -->
+            <section id="dashboardPage" class="page active">
+                <div class="stat-cards">
+                    <div class="stat-card green"><span class="stat-val" id="statAvail">0</span><span class="stat-label">Available</span></div>
+                    <div class="stat-card yellow"><span class="stat-val" id="statBusy">0</span><span class="stat-label">Busy</span></div>
+                    <div class="stat-card red"><span class="stat-val" id="statOffline">0</span><span class="stat-label">Offline</span></div>
+                    <div class="stat-card primary"><span class="stat-val" id="statJobs">0</span><span class="stat-label">Active Jobs</span></div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="team-section">
+                        <h2>Employees</h2>
+                        <div id="employeesGrid" class="team-grid"></div>
+                        <h2 style="margin-top: 2rem;">Officers</h2>
+                        <div id="officersGrid" class="team-grid"></div>
+                        <h2 style="margin-top: 2rem;">Special Officers</h2>
+                        <div id="specialOfficersGrid" class="team-grid"></div>
+                    </div>
+                    
+                    <div class="jobs-sidebar" id="adminJobsSidebar" style="display:none;">
+                        <h2>Active Jobs Management</h2>
+                        <div id="activeJobsList" class="jobs-list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Page: My Work -->
+            <section id="myWorkPage" class="page">
+                <h2>งานของฉัน (My Work)</h2>
+                <div id="myWorkList" class="my-work-grid">
+                    <!-- My jobs will be injected here -->
+                </div>
+            </section>
+
+            <!-- Page: Order -->
+            <section id="orderPage" class="page">
+                <h2>สั่งงานใหม่ (New Order)</h2>
+                <div class="order-form-card">
+                    <form id="orderForm">
+                        <!-- 1. ชื่อออเดอร์ -->
+                        <div class="form-group">
+                            <label>ชื่อออเดอร์ (Order Name)</label>
+                            <div style="display:flex; gap:0.5rem; align-items:center;">
+                                <span style="font-family: 'Space Mono', monospace; font-weight: bold; font-size: 1.1rem; color: var(--accent-dark);">IMAP-</span>
+                                <input type="text" id="orderYear" value="69" style="width: 60px; text-align: center;" required>
+                                <span>-</span>
+                                <input type="text" id="orderNum" value="0001" style="width: 100px; text-align: center;" required>
+                            </div>
+                        </div>
+
+                        <!-- 2. ดาวเทียม -->
+                        <div class="form-group">
+                            <label>ดาวเทียม (Satellite)</label>
+                            <select id="orderSat" required>
+                                <option value="" disabled selected>-- เลือกดาวเทียม --</option>
+                                <option value="EarthScanner">EarthScanner</option>
+                                <option value="Geoeye-1">Geoeye-1</option>
+                                <option value="Ikonos-2">Ikonos-2</option>
+                                <option value="Jilin-1">Jilin-1</option>
+                                <option value="Pleiades">Pleiades</option>
+                                <option value="PleiadesNeo">PleiadesNeo</option>
+                                <option value="Quickbird-2">Quickbird-2</option>
+                                <option value="Spot-6">Spot-6</option>
+                                <option value="Spot-7">Spot-7</option>
+                                <option value="THEOS-2">THEOS-2</option>
+                                <option value="Worldview-2">Worldview-2</option>
+                                <option value="Worldview-3">Worldview-3</option>
+                                <option value="WorldView Legion">WorldView Legion</option>
+                                <option value="Gaofen-1">Gaofen-1</option>
+                                <option value="Thaichote-1">Thaichote-1</option>
+                                <option value="ZiYuan-3">ZiYuan-3</option>
+                            </select>
+                            <div id="rateSummary" class="rate-summary">เลือกดาวเทียมเพื่อดูเรทเวลาจากตาราง</div>
+                            <div id="estimatePreview" class="estimate-preview">Estimated time: -</div>
+                        </div>
+
+                        <!-- 3. จำนวนภาพ -->
+                        <div class="form-group">
+                            <label>จำนวน scene (Scene Count)</label>
+                            <input type="number" id="orderImgCount" min="1" placeholder="ระบุจำนวน scene" required>
+                        </div>
+
+                        <div class="form-grid-2">
+                            <!-- 4. ประเภทงาน -->
+                            <div class="form-group">
+                                <label>ประเภทงาน (Task Type)</label>
+                                <div class="radio-group">
+                                    <label><input type="radio" name="taskType" value="DEM" required> DEM</label>
+                                    <label><input type="radio" name="taskType" value="RPC"> RPC</label>
+                                    <label><input type="radio" name="taskType" value="ORT"> Orthorectification</label>
+                                </div>
+                            </div>
+
+                            <!-- 5. ประเภทกระบวนการ -->
+                            <div class="form-group">
+                                <label>ประเภทกระบวนการ (Process Type)</label>
+                                <div class="checkbox-group">
+                                    <label><input type="checkbox" name="processType" value="PAN"> PAN</label>
+                                    <label><input type="checkbox" name="processType" value="MS"> MS</label>
+                                    <label><input type="checkbox" name="processType" value="PSP"> PSP</label>
+                                </div>
+                            </div>
+
+                            <!-- 6. Enhancement -->
+                            <div class="form-group">
+                                <label>Enhancement</label>
+                                <div class="radio-group">
+                                    <label><input type="radio" name="enhType" value="ENH" required> Enhancement</label>
+                                    <label><input type="radio" name="enhType" value="None"> None</label>
+                                </div>
+                            </div>
+
+                            <!-- 7. Mosaic -->
+                            <div class="form-group">
+                                <label>Mosaic</label>
+                                <div class="radio-group">
+                                    <label><input type="radio" name="mosType" value="MOS" required> Mosaic</label>
+                                    <label><input type="radio" name="mosType" value="None"> None</label>
+                                </div>
+                            </div>
+
+                            <!-- 7. Report -->
+                            <div class="form-group">
+                                <label>Report</label>
+                                <div class="radio-group">
+                                    <label><input type="radio" name="reportType" value="REPORT" required> Report</label>
+                                    <label><input type="radio" name="reportType" value="None"> None</label>
+                                </div>
+                            </div>
+
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem; padding: 1rem; font-size: 1.1rem;">คำนวณและสุ่มผู้ปฏิบัติงาน</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Page: Calendar -->
+            <section id="calendarPage" class="page">
+                <h2>Calendar</h2>
+                <div class="calendar-shell">
+                    <div class="calendar-toolbar calendar-toolbar-month">
+                        <div class="calendar-nav-group">
+                            <button id="calendarTodayBtn" class="btn btn-outline">Today</button>
+                            <button id="calendarPrevBtn" class="btn btn-outline" aria-label="Previous month">‹</button>
+                            <button id="calendarNextBtn" class="btn btn-outline" aria-label="Next month">›</button>
+                            <div id="calendarTitle" class="calendar-month-title"></div>
+                        </div>
+                        <div class="calendar-toolbar-right">Month</div>
+                    </div>
+                    <div class="calendar-legend">
+                        <span class="calendar-legend-item"><span class="calendar-legend-swatch employee"></span>Employee</span>
+                        <span class="calendar-legend-item"><span class="calendar-legend-swatch officer"></span>Officer</span>
+                        <span class="calendar-legend-item"><span class="calendar-legend-swatch special"></span>Special Officer</span>
+                    </div>
+                    <div id="calendarList" class="calendar-list"></div>
+                </div>
+            </section>
+
+            <!-- Page: Archive -->
+            <section id="archivePage" class="page">
+                <h2>ประวัติงาน (Archive)</h2>
+                <div class="table-container">
+                    <table id="archiveTable">
+                        <thead>
+                            <tr>
+                                <th>Project</th>
+                                <th>Steps</th>
+                                <th>Images</th>
+                                <th>Assigned To</th>
+                                <th>Completed At</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Page: Summary -->
+            <section id="summaryPage" class="page">
+                <h2>สรุปผลงานทีม (Summary)</h2>
+                <div class="table-container">
+                    <table id="summaryTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Role</th>
+                                <th>Jobs Done</th>
+                                <th>Images</th>
+                                <th>Total Mins</th>
+                                <th>Total Hours</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+            
+        </main>
+    </div>
+
+    <!-- Modals -->
+
+    <!-- Profile Modal -->
+    <div id="profileModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="pmName">Name</h3>
+                <button class="close-btn" onclick="closeModal('profileModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="pmBody"></div>
+        </div>
+    </div>
+
+    <!-- Job Detail Modal -->
+    <div id="jobDetailModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="jdTitle">Job Details</h3>
+                <button class="close-btn" onclick="closeModal('jobDetailModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="jdInfo"></p>
+                <div class="form-group">
+                    <label>หมายเหตุ (Note)</label>
+                    <textarea id="jdNote"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>ลงลายเซ็น (พิมพ์ 'confirm')</label>
+                    <input type="text" id="jdSignature" placeholder="confirm">
+                </div>
+                <button id="jdSendBtn" class="btn btn-primary" disabled>✉️ แจ้งเตือนผู้ปฏิบัติงาน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar Detail Modal -->
+    <div id="calendarDetailModal" class="modal-overlay">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <h3 id="cdTitle">Job Details</h3>
+                <button class="close-btn" onclick="closeModal('calendarDetailModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="cdBody"></div>
+        </div>
+    </div>
+
+    <!-- Order Confirm Modal -->
+    <div id="orderConfirmModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>ยืนยันการสั่งงาน</h3>
+                <button class="close-btn" onclick="closeModal('orderConfirmModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="ocBody"></div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('orderConfirmModal')">ยกเลิก</button>
+                <button class="btn btn-primary" id="ocConfirmBtn">ยืนยันสร้างงาน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Modal -->
+    <div id="adminModal" class="modal-overlay">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <h3>Admin Control</h3>
+                <button class="close-btn" onclick="closeModal('adminModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="adminPinSection">
+                    <input type="password" id="adminPinInput" placeholder="PIN (1234)">
+                    <button class="btn btn-primary" onclick="verifyAdminPin()">Unlock</button>
+                </div>
+                <div id="adminControlsSection" style="display:none;">
+                    <h4>Manage Permissions</h4>
+                    <div id="adminPermsGrid" class="perms-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    
+    <script src="app.js"></script>
+</body>
+</html>
