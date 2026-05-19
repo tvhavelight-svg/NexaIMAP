@@ -282,11 +282,12 @@ const initialMembers = [
     { name: 'toom', role: 'Special Officer', allowed: ['QC:SENT'], status: 'Available', mins: 0, forceStatus: null },
     { name: 'x', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
     { name: 'first', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'chain', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'pla', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'gib', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'nee', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'puki', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null }
+    // Officers start with no permissions; Admin assigns via Manage Permissions.
+    { name: 'chain', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'pla', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'gib', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'nee', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'puki', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null }
 ];
 
 let members = JSON.parse(JSON.stringify(initialMembers));
@@ -457,6 +458,7 @@ function recalculateMembers() {
 
 function queueWorker(step, excludeName = null, isQC = false) {
     let candidates = members.filter(m => 
+        m.role === 'Employee' &&
         m.status !== 'Offline' && 
         m.allowed.includes(step) &&
         m.name !== excludeName // No self-QC
@@ -476,6 +478,28 @@ function queueWorker(step, excludeName = null, isQC = false) {
     if(!candidates.length) return null;
 
     // Tie-breaker logic: sort by mins ASC, then random if equal
+    candidates.sort((a, b) => {
+        if(a.mins === b.mins) return Math.random() - 0.5;
+        return a.mins - b.mins;
+    });
+
+    return candidates[0].name;
+}
+
+function queueWorkerForSteps(steps, excludeName = null) {
+    const requiredSteps = Array.isArray(steps) ? steps.filter(Boolean) : [];
+    if(requiredSteps.length === 0) return null;
+
+    let candidates = members.filter(member =>
+        member.role === 'Employee' &&
+        member.status === 'Available' &&
+        member.status !== 'Offline' &&
+        member.name !== excludeName &&
+        requiredSteps.every(step => member.allowed.includes(step))
+    );
+
+    if(!candidates.length) return null;
+
     candidates.sort((a, b) => {
         if(a.mins === b.mins) return Math.random() - 0.5;
         return a.mins - b.mins;
@@ -1152,9 +1176,12 @@ function setupOrderForm() {
             return;
         }
 
-        // Find primary worker (based on first worker step)
-        let worker = queueWorker(wSteps[0]);
-        if(!worker) { alert(`No Available worker found for ${wSteps[0]}`); return; }
+        // Find primary worker (must have permissions for all selected steps)
+        let worker = queueWorkerForSteps(wSteps);
+        if(!worker) {
+            alert('No Available worker found (missing permissions for selected steps)');
+            return;
+        }
 
         // Agent.md logic: estimatedMinutes = sum(process time per scene) * scene count.
         const estimatedMinutes = calculateStepsMins(satellite, selectedSteps, imgCount);
@@ -1589,4 +1616,3 @@ function togglePerm(name, step, isChecked) {
 
 // Initialize Firebase
 initFirebase();
-
