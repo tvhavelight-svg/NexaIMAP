@@ -338,6 +338,20 @@
         </div>
     </div>
 
+    <!-- Order Summary Modal -->
+    <div id="orderSummaryModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>ใบสรุปการสั่งงาน</h3>
+                <button class="close-btn" onclick="closeModal('orderSummaryModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="osBody"></div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeModal('orderSummaryModal'); document.querySelector('[data-target=\'dashboardPage\']').click();">กลับไป Dashboard</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Admin Modal -->
     <div id="adminModal" class="modal-overlay">
         <div class="modal-card modal-lg">
