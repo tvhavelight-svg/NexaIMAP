@@ -45,6 +45,12 @@ function loadFromFirestore() {
                 if(allowed.length > 0) return { ...member, allowed };
                 return { ...member, allowed: ['QC', ...PROCESS_KEYS] };
             });
+
+            // Backfill acceptJobs default (do not override explicit false).
+            members = members.map(member => {
+                if(typeof member.acceptJobs === 'boolean') return member;
+                return { ...member, acceptJobs: true };
+            });
             
             // Ensure admin user exists
             const adminExists = members.some(m => m.name === 'admin');
@@ -227,6 +233,13 @@ function updateRateAvailability() {
     const optionInputs = document.querySelectorAll("#orderForm input[type='radio'], #orderForm input[type='checkbox']");
 
     optionInputs.forEach(input => {
+        // Do not disable non-process controls.
+        if(input.name === 'rawdataReady') {
+            input.disabled = false;
+            input.closest("label")?.classList.remove("option-disabled");
+            return;
+        }
+
         if(input.value === "None") {
             input.disabled = false;
             input.closest("label")?.classList.remove("option-disabled");
@@ -278,25 +291,25 @@ const initialMembers = [
     { name: 'admin', role: 'Admin', allowed: [...PROCESS_KEYS], status: 'Available', mins: 0, forceStatus: null },
     
     // Employees (7) - start with no permissions; must be ticked in Manage Permissions.
-    { name: 'joy', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'bboy', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'oil', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'june', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'phaifah', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'aunaun', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'nine', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'joy', role: 'Employee', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'bboy', role: 'Employee', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'oil', role: 'Employee', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'june', role: 'Employee', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'phaifah', role: 'Employee', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'aunaun', role: 'Employee', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'nine', role: 'Employee', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
     
     // Special Officer for QC:SENT
-    { name: 'toom', role: 'Special Officer', allowed: ['QC:SENT'], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'toom', role: 'Special Officer', allowed: ['QC:SENT'], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
     
     // Officers - default to all permissions + QC.
-    { name: 'x', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'first', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'chain', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'pla', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'gib', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'nee', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'puki', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null }
+    { name: 'x', role: 'Officer', allowed: ['QC', ...allSteps], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'first', role: 'Officer', allowed: ['QC', ...allSteps], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'chain', role: 'Officer', allowed: ['QC', ...allSteps], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'pla', role: 'Officer', allowed: ['QC', ...allSteps], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'gib', role: 'Officer', allowed: ['QC', ...allSteps], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'nee', role: 'Officer', allowed: ['QC', ...allSteps], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'puki', role: 'Officer', allowed: ['QC', ...allSteps], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null }
 ];
 
 let members = JSON.parse(JSON.stringify(initialMembers));
@@ -503,6 +516,7 @@ function queueWorkerForSteps(steps, excludeName = null) {
         member.role === 'Employee' &&
         member.status === 'Available' &&
         member.status !== 'Offline' &&
+        member.acceptJobs !== false &&
         member.name !== excludeName &&
         requiredSteps.every(step => member.allowed.includes(step))
     );
@@ -624,6 +638,7 @@ function assignRoleTask(role, desiredStart, durationMins, excludeNames = [], req
     const needed = Array.isArray(requiredSteps) ? requiredSteps.filter(Boolean) : [];
     const candidates = members.filter(member => {
         if(member.role !== role || member.status === 'Offline' || excludeNames.includes(member.name)) return false;
+        if(member.acceptJobs === false) return false;
         if(!Array.isArray(member.allowed) || member.allowed.length === 0) return false; // must be ticked
         if(needed.length === 0) return true;
         return needed.every(step => member.allowed.includes(step));
@@ -660,8 +675,9 @@ function assignRoleTask(role, desiredStart, durationMins, excludeNames = [], req
                 return;
             }
 
-            if(candidate.currentLoad === best.currentLoad && candidate.name < best.name) {
-                best = candidate;
+            if(candidate.currentLoad === best.currentLoad) {
+                // When everything is equal, pick randomly to avoid sticking to the same person.
+                if(Math.random() < 0.5) best = candidate;
             }
         }
     });
@@ -1204,7 +1220,8 @@ function setupOrderForm() {
         const combinedMins = qcImageMins + SPECIAL_OFFICER_SENT_MINUTES;
         const officerStart = moveToNextWorkday(addWorkingDays(workerDeadline, 1));
         const combinedEnd = addMinutes(officerStart, combinedMins);
-        const officerTask = assignRoleTask('Officer', officerStart, combinedMins, [worker], selectedSteps);
+        // Officer QC assignment only requires QC permission + acceptJobs toggle.
+        const officerTask = assignRoleTask('Officer', officerStart, combinedMins, [worker], ['QC']);
         if(!officerTask) {
             alert('No available Officer found for image QC');
             return;
@@ -1604,6 +1621,7 @@ function renderAdminPerms() {
     grid.innerHTML = '';
     members.forEach(m => {
         const allowed = Array.isArray(m.allowed) ? m.allowed : [];
+        const acceptChecked = m.acceptJobs === false ? '' : 'checked';
         const keys =
             m.role === 'Officer' ? ['QC', ...allSteps] :
             m.role === 'Special Officer' ? ['QC:SENT'] :
@@ -1614,11 +1632,13 @@ function renderAdminPerms() {
             const checked = allowed.includes(s) ? 'checked' : '';
             return `<label style="display:inline-flex; align-items:center; gap:0.2rem; font-size:0.8rem; margin-right:0.5rem;"><input type="checkbox" value="${s}" ${checked} onchange="togglePerm('${m.name}', '${s}', this.checked)"> ${s}</label>`;
         }).join('');
+
+        const acceptToggle = `<label style="display:inline-flex; align-items:center; gap:0.35rem; font-size:0.85rem; margin-right:0.75rem; padding:0.25rem 0.5rem; border:1px solid var(--border); border-radius:6px; background:var(--bg2);"><input type="checkbox" ${acceptChecked} onchange="toggleAcceptJobs('${m.name}', this.checked)"> รับงาน</label>`;
         
         grid.innerHTML += `
             <div style="background:var(--surface); padding:1rem; border:1px solid var(--border); border-radius:8px; margin-bottom:0.5rem;">
                 <strong>${m.name} (${m.role})</strong><br>
-                <div style="margin-top:0.5rem;">${options}</div>
+                <div style="margin-top:0.5rem; display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">${acceptToggle}<span style="flex:1 1 100%"></span>${options}</div>
             </div>
         `;
     });
@@ -1626,8 +1646,16 @@ function renderAdminPerms() {
 
 function togglePerm(name, step, isChecked) {
     const user = members.find(m => m.name === name);
+    user.allowed = Array.isArray(user.allowed) ? user.allowed : [];
     if(isChecked && !user.allowed.includes(step)) user.allowed.push(step);
     if(!isChecked) user.allowed = user.allowed.filter(s => s !== step);
+    saveAppState();
+}
+
+function toggleAcceptJobs(name, isChecked) {
+    const user = members.find(m => m.name === name);
+    if(!user) return;
+    user.acceptJobs = Boolean(isChecked);
     saveAppState();
 }
 
