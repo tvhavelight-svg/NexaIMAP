@@ -480,8 +480,9 @@ function recalculateMembers() {
 
 function queueWorker(step, excludeName = null, isQC = false) {
     let candidates = members.filter(m => 
-        m.role === 'Employee' &&
+        (m.role === 'Employee' || m.role === 'Officer') &&
         m.status !== 'Offline' && 
+        m.acceptJobs !== false &&
         m.allowed.includes(step) &&
         m.name !== excludeName // No self-QC
     );
@@ -513,7 +514,7 @@ function queueWorkerForSteps(steps, excludeName = null) {
     if(requiredSteps.length === 0) return null;
 
     let candidates = members.filter(member =>
-        member.role === 'Employee' &&
+        (member.role === 'Employee' || member.role === 'Officer') &&
         member.status === 'Available' &&
         member.status !== 'Offline' &&
         member.acceptJobs !== false &&
@@ -833,7 +834,7 @@ function renderMyWork() {
     const myJobs = currentUser.role === 'Employee'
         ? jobs.filter(j => j.worker === currentUser.name)
         : currentUser.role === 'Officer'
-            ? jobs.filter(j => j.qcOfficer === currentUser.name || j.qc === currentUser.name)
+            ? jobs.filter(j => j.worker === currentUser.name || j.qcOfficer === currentUser.name || j.qc === currentUser.name)
             : currentUser.role === 'Special Officer'
                 ? jobs.filter(j => j.specialOfficer === currentUser.name || j.specialQc === currentUser.name)
                 : [];
