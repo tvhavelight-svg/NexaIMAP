@@ -188,10 +188,10 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); border-color: tr
 .form-group label { display: block; font-weight: bold; margin-bottom: 0.25rem; font-size: 0.9rem; }
 .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 @media(max-width: 600px) { .form-grid-2 { grid-template-columns: 1fr; } }
-.radio-group, .checkbox-group { display: flex; flex-direction: column; gap: 0.5rem; background: var(--bg2); padding: 1rem; border-radius: 8px; border: 1px solid var(--border); }
-.radio-group label, .checkbox-group label { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: normal; margin-bottom: 0; padding: 0.5rem; border-radius: 4px; transition: background 0.2s; }
-.radio-group label:hover, .checkbox-group label:hover { background: var(--accent); color: white; }
-.radio-group input, .checkbox-group input { width: auto; margin: 0; pointer-events: auto; }
+.radio-group, .checkbox-group { display: flex; flex-direction: row; flex-wrap: wrap; gap: 1rem; background: var(--bg2); padding: 1rem; border-radius: 8px; border: 1px solid var(--border); }
+.radio-group label, .checkbox-group label { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: normal; margin-bottom: 0; padding: 0.5rem 1rem; border-radius: 4px; border: 1px solid var(--border); transition: all 0.2s; }
+.radio-group label:hover, .checkbox-group label:hover { background: var(--accent); color: white; border-color: var(--accent); }
+.radio-group input, .checkbox-group input { width: auto; margin: 0; pointer-events: auto; position: relative; z-index: 1; }
 
 /* Tables */
 .table-container { overflow-x: auto; background: var(--surface); border-radius: 12px; box-shadow: 0 4px 15px var(--shadow); margin-top: 1rem; }
