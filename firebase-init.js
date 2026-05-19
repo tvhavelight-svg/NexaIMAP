@@ -48,14 +48,14 @@ window.initialMembers = [
     { name: 'nine', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
     // Special Officer for QC:SENT
     { name: 'toom', role: 'Special Officer', allowed: ['QC:SENT'], status: 'Available', mins: 0, forceStatus: null },
-    // Officers start with no permissions; must be ticked in Manage Permissions.
-    { name: 'x', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'first', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'chain', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'pla', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'gib', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'nee', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'puki', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null }
+    // Officers - default to all permissions + QC.
+    { name: 'x', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'first', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'chain', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'pla', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'gib', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'nee', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'puki', role: 'Officer', allowed: ['QC', ...allSteps], status: 'Available', mins: 0, forceStatus: null }
 ];
 
 window.members = JSON.parse(JSON.stringify(window.initialMembers));
