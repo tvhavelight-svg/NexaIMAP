@@ -269,25 +269,26 @@ const initialMembers = [
     // Admin
     { name: 'admin', role: 'Admin', allowed: [...PROCESS_KEYS], status: 'Available', mins: 0, forceStatus: null },
     
-    // Employees (7) - เริ่มไม่มีสิทธิ์ ต้องติ้กใน Manage Permissions ก่อนถึงจะได้งาน
-    { name: 'joy', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'bboy', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'oil', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'june', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'phaifah', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'aunaun', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'nine', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    // Employees - can do all steps
+    { name: 'joy', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'bboy', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'oil', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'june', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'phaifah', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'aunaun', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'nine', role: 'Employee', allowed: [...empSteps], status: 'Available', mins: 0, forceStatus: null },
     
-    // Officers (8)
+    // Special Officer for QC:SENT
     { name: 'toom', role: 'Special Officer', allowed: ['QC:SENT'], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'x', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'first', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    // Officers start with no permissions; Admin assigns via Manage Permissions.
-    { name: 'chain', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'pla', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'gib', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'nee', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'puki', role: 'Officer', allowed: [], status: 'Available', mins: 0, forceStatus: null }
+    
+    // Officers - can do all steps + be assigned as QC
+    { name: 'x', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'first', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'chain', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'pla', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'gib', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'nee', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'puki', role: 'Officer', allowed: [...allSteps], status: 'Available', mins: 0, forceStatus: null }
 ];
 
 let members = JSON.parse(JSON.stringify(initialMembers));
