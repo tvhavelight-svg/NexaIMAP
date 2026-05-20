@@ -58,6 +58,7 @@
             
             <!-- Page: Dashboard -->
             <section id="dashboardPage" class="page active">
+                <div id="inboxPanel" class="inbox-panel" style="display:none;"></div>
                 <div class="stat-cards">
                     <div class="stat-card green"><span class="stat-val" id="statAvail">0</span><span class="stat-label">Available</span></div>
                     <div class="stat-card yellow"><span class="stat-val" id="statBusy">0</span><span class="stat-label">Busy</span></div>
@@ -357,6 +358,27 @@
                 <button class="btn btn-outline" id="osCopyBtn">คัดลอก</button>
                 <button class="btn btn-outline" id="osPrintBtn">พิมพ์</button>
                 <button class="btn btn-primary" onclick="closeModal('orderSummaryModal'); document.querySelector('[data-target=\'dashboardPage\']').click();">เสร็จสิ้น</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Worker Reject Modal -->
+    <div id="workerRejectModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Reject งาน</h3>
+                <button class="close-btn" onclick="closeModal('workerRejectModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="wrInfo" class="text-muted" style="margin-bottom:0.75rem;"></div>
+                <div class="form-group">
+                    <label>รายละเอียดเหตุผล (ส่งกลับไปให้คนสั่งงาน)</label>
+                    <textarea id="wrReason" placeholder="ระบุเหตุผล/รายละเอียดที่ต้องแก้ไข"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('workerRejectModal')">ยกเลิก</button>
+                <button class="btn btn-primary" id="wrConfirmBtn">ยืนยัน Reject</button>
             </div>
         </div>
     </div>

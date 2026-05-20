@@ -121,6 +121,13 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); border-color: tr
 .stat-card.red .stat-val { color: var(--red-text); }
 .stat-card.primary .stat-val { color: var(--accent-dark); }
 
+/* Inbox */
+.inbox-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); padding: 1rem; margin-bottom: 1.25rem; }
+.inbox-title { font-weight: 900; margin-bottom: 0.5rem; }
+.inbox-item { padding: 0.75rem 0.9rem; border: 1px solid var(--border); border-radius: 10px; background: var(--surface2); margin-top: 0.6rem; cursor: pointer; }
+.inbox-item:hover { border-color: var(--accent); }
+.inbox-item .small { color: var(--text-muted); font-size: 0.85rem; margin-top: 2px; }
+
 /* Team Grid */
 .dashboard-grid { display: grid; grid-template-columns: 1fr 300px; gap: 2rem; }
 @media(max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }

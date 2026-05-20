@@ -770,6 +770,27 @@ function renderPage(pageId) {
 // ==========================================
 function renderDashboard() {
     recalculateMembers();
+
+    // Inbox: show rejected jobs for requester (คนสั่งงาน)
+    const inbox = document.getElementById('inboxPanel');
+    if(inbox) {
+        const rejected = [...jobs, ...archivedJobs].filter(j => j.status === 'rejected' && j.requestedBy === currentUser.name);
+        if(rejected.length === 0) {
+            inbox.style.display = 'none';
+        } else {
+            inbox.style.display = 'block';
+            inbox.innerHTML = `
+              <div class="inbox-title">แจ้งเตือน</div>
+              ${rejected.map(j => `
+                <div class="inbox-item" onclick="openCalendarJobDetail('${j.id}')">
+                  <strong>${escapeHtml(j.name)}</strong>
+                  <div class="small">Rejected by ${escapeHtml(j.rejectedBy || j.worker || '-')} • ${escapeHtml(new Date(j.rejectedAt || j.completedAt || Date.now()).toLocaleString('th-TH'))}</div>
+                  <div class="small">${escapeHtml(j.rejectReason || '-')}</div>
+                </div>
+              `).join('')}
+            `;
+        }
+    }
     
     // Stats
     const avail = members.filter(m => m.status === 'Available').length;
@@ -882,8 +903,17 @@ function renderMyWork() {
         let bodyBlock = '';
         if(currentUser.role === 'Employee') {
             if(job.status === 'ordered') {
-                actionButtons = `<button class="btn btn-primary" onclick="startWorking('${job.id}')">▶ เริ่มทำงาน</button>`;
-                bodyBlock = `<div class="text-muted">กด “เริ่มทำงาน” เพื่อเริ่มกรอกข้อมูลสำหรับส่งตรวจ</div>`;
+                const accepted = job.workerAccepted === true;
+                if(!accepted) {
+                    bodyBlock = renderWorkerOrderDetail(job);
+                    actionButtons = `
+                        <button class="btn btn-outline" onclick="openWorkerReject('${job.id}')">Reject</button>
+                        <button class="btn btn-primary" onclick="workerAcceptJob('${job.id}')">Accept</button>
+                    `;
+                } else {
+                    actionButtons = `<button class="btn btn-primary" onclick="startWorking('${job.id}')">▶ เริ่มทำงาน</button>`;
+                    bodyBlock = `<div class="text-muted">รับงานแล้ว กด “เริ่มทำงาน” เพื่อเริ่มกรอกข้อมูลสำหรับส่งตรวจ</div>`;
+                }
             } else if(job.status === 'working') {
                 actionButtons = `
                     <button class="btn btn-outline" onclick="markWorkUpdated('${job.id}')">Update Work</button>
@@ -894,6 +924,9 @@ function renderMyWork() {
                 actionButtons = `<span style="color:var(--green-text);">✓ งานอนุมัติแล้ว รอแจ้งผู้สั่งงาน</span>`;
             } else if(job.status === 'completed') {
                 actionButtons = `<span style="color:var(--text-muted);">งานเสร็จสิ้น</span>`;
+            } else if(job.status === 'rejected') {
+                actionButtons = `<span class="text-muted">งานถูก Reject แล้ว</span>`;
+                bodyBlock = `<div class="text-muted">${escapeHtml(job.rejectReason || '')}</div>`;
             }
         } else if(currentUser.role === 'Officer') {
             if(job.status === 'qc_check') {
@@ -935,6 +968,78 @@ function renderMyWork() {
             </div>
         `;
     });
+}
+
+function renderWorkerOrderDetail(job) {
+    return `
+      <div class="work-block">
+        <div class="work-block-title">รายละเอียดงาน</div>
+        <div class="calendar-detail-grid" style="margin-top:0.5rem;">
+          <div><strong>Satellite</strong><span>${escapeHtml(job.satellite || '-')}</span></div>
+          <div><strong>Scene Count</strong><span>${escapeHtml(job.sceneCount ?? job.imgCount ?? '-')}</span></div>
+          <div><strong>Processes</strong><span>${escapeHtml((job.steps || []).join(', ') || '-')}</span></div>
+          <div><strong>Approver</strong><span>${escapeHtml(job.approver || '-')}</span></div>
+          <div><strong>Rawdata Ready</strong><span>${escapeHtml(job.rawdataReady || '-')}</span></div>
+          <div><strong>Requested By</strong><span>${escapeHtml(job.requestedBy || '-')}</span></div>
+        </div>
+        <div class="text-muted" style="margin-top:0.6rem;">กด Accept เพื่อรับงาน หรือ Reject เพื่อส่งกลับไปให้คนสั่งงาน</div>
+      </div>
+    `;
+}
+
+let activeWorkerRejectJobId = null;
+
+function openWorkerReject(jobId) {
+    const job = findJobById(jobId);
+    if(!job) return;
+    activeWorkerRejectJobId = jobId;
+    const info = document.getElementById('wrInfo');
+    if(info) info.textContent = `${job.name} • ${job.satellite || '-'} • ${job.imgCount} scenes`;
+    const reason = document.getElementById('wrReason');
+    if(reason) reason.value = '';
+    const btn = document.getElementById('wrConfirmBtn');
+    if(btn) {
+        btn.onclick = () => workerRejectJob(jobId);
+    }
+    openModal('workerRejectModal');
+}
+
+function workerRejectJob(jobId) {
+    const job = findJobById(jobId);
+    if(!job) return;
+    const reason = document.getElementById('wrReason')?.value.trim();
+    if(!reason) {
+        alert('กรุณากรอกเหตุผล/รายละเอียดก่อน Reject');
+        return;
+    }
+
+    job.status = 'rejected';
+    job.rejectedBy = currentUser.name;
+    job.rejectedAt = new Date().toISOString();
+    job.rejectReason = reason;
+    job.completedAt = job.rejectedAt;
+
+    // Remove from active jobs list and move to archive so it won't keep blocking queue.
+    if(jobs.some(j => j.id === jobId)) {
+        archivedJobs.push(job);
+        jobs = jobs.filter(j => j.id !== jobId);
+        normalizeQueuePositions();
+    }
+
+    saveAppState();
+    closeModal('workerRejectModal');
+    renderMyWork();
+    renderDashboard();
+}
+
+function workerAcceptJob(jobId) {
+    const job = findJobById(jobId);
+    if(!job) return;
+    job.workerAccepted = true;
+    job.workerAcceptedAt = new Date().toISOString();
+    saveAppState();
+    // Start working immediately so the worker sees the form right away.
+    startWorking(jobId);
 }
 
 function addPathInput(jobId) {
@@ -1570,7 +1675,8 @@ function setupOrderForm() {
             createdAt: createdAt.toISOString(),
             status: 'ordered',
             rawdataReady: document.querySelector('input[name="rawdataReady"]:checked')?.value || 'No',
-            approver: document.getElementById('orderApprover').value
+            approver: document.getElementById('orderApprover').value,
+            requestedBy: currentUser?.name || null
         };
 
         showOrderConfirm(draftJob);
