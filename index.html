@@ -36,6 +36,7 @@
             </div>
             <div class="user-controls">
                 <span id="currentUserDisplay" class="user-name"></span>
+                <button id="myWorkTopBtn" class="btn btn-outline">งานของฉัน</button>
 <button id="adminBtn" class="btn btn-outline" style="display:none;">Admin</button>
                 <button id="resetBtn" class="btn btn-outline" style="display:none;">Reset Data</button>
                 <button id="logoutBtn" class="btn btn-outline">Logout</button>
@@ -45,8 +46,8 @@
         <!-- Navigation -->
         <nav class="tabs">
             <button class="tab-btn active" data-target="dashboardPage">Dashboard</button>
-            <button class="tab-btn" data-target="myWorkPage">งานของฉัน</button>
             <button class="tab-btn" data-target="orderPage">สั่งงาน</button>
+            <button class="tab-btn" data-target="statusPage">Status</button>
             <button class="tab-btn" data-target="calendarPage">Calendar</button>
             <button class="tab-btn" data-target="archivePage">Archive</button>
             <button class="tab-btn" data-target="summaryPage">Summary</button>
@@ -87,6 +88,12 @@
                 <div id="myWorkList" class="my-work-grid">
                     <!-- My jobs will be injected here -->
                 </div>
+            </section>
+
+            <!-- Page: Status -->
+            <section id="statusPage" class="page">
+                <h2>Status</h2>
+                <div id="statusList" class="status-grid"></div>
             </section>
 
             <!-- Page: Order -->

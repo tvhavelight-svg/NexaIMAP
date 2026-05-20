@@ -726,18 +726,29 @@ function getNextAvailableOrderNum(year, preferredNum) {
 // ==========================================
 // NAVIGATION
 // ==========================================
+function navigateToPage(targetId) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+
+    const tab = document.querySelector(`.tab-btn[data-target="${targetId}"]`);
+    if(tab) tab.classList.add('active');
+    const page = document.getElementById(targetId);
+    if(page) page.classList.add('active');
+
+    renderPage(targetId);
+}
+
 document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        
-        e.target.classList.add('active');
-        const targetId = e.target.getAttribute('data-target');
-        document.getElementById(targetId).classList.add('active');
-        
-        renderPage(targetId);
+        const targetId = e.currentTarget.getAttribute('data-target');
+        navigateToPage(targetId);
     });
 });
+
+const myWorkTopBtn = document.getElementById('myWorkTopBtn');
+if(myWorkTopBtn) {
+    myWorkTopBtn.addEventListener('click', () => navigateToPage('myWorkPage'));
+}
 
 function initApp() {
     renderDashboard();
@@ -748,6 +759,7 @@ function initApp() {
 function renderPage(pageId) {
     if(pageId === 'dashboardPage') renderDashboard();
     if(pageId === 'myWorkPage') renderMyWork();
+    if(pageId === 'statusPage') renderStatus();
     if(pageId === 'calendarPage') renderCalendar();
     if(pageId === 'archivePage') renderArchive();
     if(pageId === 'summaryPage') renderSummary();
@@ -1025,6 +1037,92 @@ function getJobTimeline(job) {
 
 function overlapsRange(start, end, rangeStart, rangeEnd) {
     return start <= rangeEnd && end >= rangeStart;
+}
+
+// ==========================================
+// STATUS
+// ==========================================
+function getMemberActiveProcess(memberName) {
+    // Employee primary work
+    const asWorker = jobs.find(j => (j.worker === memberName) && (j.status === 'ordered' || j.status === 'working'));
+    if(asWorker) {
+        const label = asWorker.status === 'ordered'
+            ? 'รอเริ่มงาน: กำลังปรับแก้ภาพถ่ายดาวเทียม'
+            : 'กำลังปรับแก้ภาพถ่ายดาวเทียม';
+        return { label, jobName: asWorker.name, role: 'Employee' };
+    }
+
+    // Officer QC work
+    const asOfficer = jobs.find(j => (j.qcOfficer === memberName || j.qc === memberName) && j.status === 'qc_check');
+    if(asOfficer) {
+        return { label: 'อยู่ระหว่างตรวจสอบคุณภาพผลิตภัณฑ์ (QC)', jobName: asOfficer.name, role: 'Officer' };
+    }
+
+    const officerQueued = jobs.find(j => (j.qcOfficer === memberName || j.qc === memberName) && (j.status === 'ordered' || j.status === 'working'));
+    if(officerQueued) {
+        return { label: 'รอคิวตรวจสอบคุณภาพผลิตภัณฑ์ (QC)', jobName: officerQueued.name, role: 'Officer' };
+    }
+
+    // Special Officer approve before send
+    const asSpecial = jobs.find(j => (j.specialOfficer === memberName || j.specialQc === memberName) && j.status === 'special_check');
+    if(asSpecial) {
+        return { label: 'อยู่ระหว่างตรวจสอบคุณภาพผลิตภัณฑ์ (Approve ก่อนส่ง)', jobName: asSpecial.name, role: 'Special Officer' };
+    }
+
+    const specialQueued = jobs.find(j => (j.specialOfficer === memberName || j.specialQc === memberName) && (j.status === 'ordered' || j.status === 'working' || j.status === 'qc_check'));
+    if(specialQueued) {
+        return { label: 'รอคิวตรวจสอบคุณภาพผลิตภัณฑ์ (Approve ก่อนส่ง)', jobName: specialQueued.name, role: 'Special Officer' };
+    }
+
+    return null;
+}
+
+function renderStatus() {
+    recalculateMembers();
+    const list = document.getElementById('statusList');
+    if(!list) return;
+
+    const roleOrder = { 'Employee': 1, 'Officer': 2, 'Special Officer': 3, 'Admin': 4 };
+    const sorted = [...members].sort((a, b) => {
+        const ra = roleOrder[a.role] ?? 99;
+        const rb = roleOrder[b.role] ?? 99;
+        if(ra !== rb) return ra - rb;
+        return a.name.localeCompare(b.name);
+    });
+
+    list.innerHTML = '';
+
+    sorted.forEach(m => {
+        const proc = getMemberActiveProcess(m.name);
+        const statusBadge = `<span class="status-badge ${m.status.toLowerCase()}">${m.status}</span>`;
+        const accept = (m.acceptJobs === false) ? `<span class="status-badge offline">ปิดรับงาน</span>` : `<span class="status-badge available">รับงาน</span>`;
+
+        let processHtml = `<div class="status-process text-muted">ไม่มีงานที่กำลังทำ</div>`;
+        if(proc) {
+            processHtml = `
+              <div class="status-process">
+                <div class="status-process-title">${escapeHtml(proc.label)}</div>
+                <div class="status-process-sub">${escapeHtml(proc.jobName)}</div>
+              </div>
+            `;
+        }
+
+        list.innerHTML += `
+          <div class="status-card">
+            <div class="status-card-top">
+              <div>
+                <div class="status-name">${escapeHtml(m.name)}</div>
+                <div class="status-role">${escapeHtml(m.role)}</div>
+              </div>
+              <div class="status-badges">
+                ${statusBadge}
+                ${accept}
+              </div>
+            </div>
+            ${processHtml}
+          </div>
+        `;
+    });
 }
 
 function renderCalendar() {
