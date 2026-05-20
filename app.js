@@ -1310,6 +1310,203 @@ function showOrderConfirm(draft) {
     openModal('orderConfirmModal');
 }
 
+function escapeHtml(text) {
+    return String(text ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+function formatDateOnly(value) {
+    const d = new Date(value);
+    return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function buildOrderReceiptText(job) {
+    const lines = [];
+    lines.push('NexaIMAP - Order Receipt');
+    lines.push(`Order: ${job.name}`);
+    lines.push(`Created: ${new Date(job.createdAt).toLocaleString('th-TH')}`);
+    lines.push(`Satellite: ${job.satellite}`);
+    lines.push(`Scenes: ${job.imgCount}`);
+    lines.push(`Rawdata Ready: ${job.rawdataReady || '-'}`);
+    lines.push(`Approver: ${job.approver || '-'}`);
+    lines.push(`Steps: ${(job.steps || []).join(', ')}`);
+    lines.push('');
+    lines.push(`Employee: ${job.worker || '-'} | ${formatDateOnly(job.workerStart)} - ${formatDateOnly(job.workerDeadline)} | ${formatMins(job.workerMins)} mins`);
+    lines.push(`Officer(QC): ${job.qcOfficer || job.qc || '-'} | ${formatDateOnly(job.qcImageStart)} - ${formatDateOnly(job.qcImageEnd)} | ${formatMins(job.qcImageMins)} mins`);
+    lines.push(`Special Officer(QC:SENT): ${job.specialOfficer || job.specialQc || '-'} | ${formatDateOnly(job.qcSentStart)} - ${formatDateOnly(job.qcSentEnd)} | ${formatMins(job.qcSentMins)} mins`);
+    lines.push('');
+    lines.push(`Final deadline: ${new Date(job.finalDeadline || job.deadline).toLocaleString('th-TH')}`);
+    return lines.join('\n');
+}
+
+function openPrintWindow(title, html) {
+    const w = window.open('', '_blank', 'noopener,noreferrer,width=900,height=700');
+    if(!w) {
+        alert('ไม่สามารถเปิดหน้าต่างพิมพ์ได้ (อาจโดนบล็อก pop-up)');
+        return;
+    }
+    w.document.open();
+    w.document.write(`
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>${escapeHtml(title)}</title>
+    <style>
+      :root { color-scheme: light; }
+      body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; color: #111827; }
+      h1 { font-size: 18px; margin: 0 0 12px; }
+      .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin: 12px 0 18px; font-size: 13px; }
+      .meta div { padding: 8px 10px; border: 1px solid #E5E7EB; border-radius: 8px; }
+      .table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+      .table th, .table td { border: 1px solid #E5E7EB; padding: 8px 10px; font-size: 13px; text-align: left; vertical-align: top; }
+      .table th { background: #F9FAFB; }
+      .small { color: #6B7280; font-size: 12px; }
+      @media print { body { margin: 0; } }
+    </style>
+  </head>
+  <body>
+    ${html}
+    <script>
+      window.addEventListener('load', () => { setTimeout(() => window.print(), 50); });
+    </script>
+  </body>
+</html>`);
+    w.document.close();
+}
+
+function showOrderSummary(job) {
+    const osBody = document.getElementById('osBody');
+    if(!osBody) return;
+
+    const steps = (job.steps || []).join(', ');
+    const createdLabel = new Date(job.createdAt).toLocaleString('th-TH');
+    const finalDl = new Date(job.finalDeadline || job.deadline).toLocaleString('th-TH');
+
+    const employeeRow = {
+        label: 'Employee',
+        name: job.worker || '-',
+        start: job.workerStart,
+        end: job.workerDeadline,
+        mins: job.workerMins
+    };
+    const officerRow = {
+        label: 'Officer (QC)',
+        name: job.qcOfficer || job.qc || '-',
+        start: job.qcImageStart,
+        end: job.qcImageEnd,
+        mins: job.qcImageMins
+    };
+    const specialRow = {
+        label: 'Special Officer (QC:SENT)',
+        name: job.specialOfficer || job.specialQc || '-',
+        start: job.qcSentStart,
+        end: job.qcSentEnd,
+        mins: job.qcSentMins
+    };
+
+    const rows = [employeeRow, officerRow, specialRow].map(r => `
+        <tr>
+          <td><strong>${escapeHtml(r.label)}</strong></td>
+          <td>${escapeHtml(r.name)}</td>
+          <td>${escapeHtml(formatDateOnly(r.start))}</td>
+          <td>${escapeHtml(formatDateOnly(r.end))}</td>
+          <td>${escapeHtml(formatMins(r.mins))}</td>
+        </tr>
+    `).join('');
+
+    osBody.innerHTML = `
+      <div class="receipt">
+        <div class="receipt-head">
+          <div>
+            <div class="receipt-title">Receipt</div>
+            <div class="receipt-sub">บันทึกคำสั่งซื้อเรียบร้อยแล้ว</div>
+          </div>
+          <div class="receipt-order">
+            <div class="receipt-order-id">${escapeHtml(job.name)}</div>
+            <div class="receipt-order-date">${escapeHtml(createdLabel)}</div>
+          </div>
+        </div>
+
+        <div class="receipt-meta">
+          <div><div class="k">Satellite</div><div class="v">${escapeHtml(job.satellite)}</div></div>
+          <div><div class="k">Scenes</div><div class="v">${escapeHtml(job.imgCount)}</div></div>
+          <div><div class="k">Rawdata Ready</div><div class="v">${escapeHtml(job.rawdataReady || '-')}</div></div>
+          <div><div class="k">Approver</div><div class="v">${escapeHtml(job.approver || '-')}</div></div>
+        </div>
+
+        <div class="receipt-block">
+          <div class="k">Steps</div>
+          <div class="v">${escapeHtml(steps)}</div>
+        </div>
+
+        <div class="receipt-block">
+          <div class="k">Assignments & Timeline</div>
+          <table class="receipt-table">
+            <thead>
+              <tr><th>Role</th><th>Name</th><th>Start</th><th>End</th><th>Minutes</th></tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+          <div class="receipt-footnote">Final deadline: <strong>${escapeHtml(finalDl)}</strong></div>
+        </div>
+      </div>
+    `;
+
+    const copyBtn = document.getElementById('osCopyBtn');
+    const printBtn = document.getElementById('osPrintBtn');
+    const receiptText = buildOrderReceiptText(job);
+
+    if(copyBtn) {
+        copyBtn.onclick = async () => {
+            try {
+                await navigator.clipboard.writeText(receiptText);
+                copyBtn.textContent = 'คัดลอกแล้ว';
+                setTimeout(() => copyBtn.textContent = 'คัดลอก', 1200);
+            } catch {
+                // Fallback
+                prompt('คัดลอกข้อความด้านล่าง', receiptText);
+            }
+        };
+    }
+
+    if(printBtn) {
+        printBtn.onclick = () => {
+            const printHtml = `
+              <h1>NexaIMAP - Order Receipt</h1>
+              <div class="small">Order created at ${escapeHtml(createdLabel)}</div>
+              <div class="meta">
+                <div><strong>Order</strong><br>${escapeHtml(job.name)}</div>
+                <div><strong>Satellite</strong><br>${escapeHtml(job.satellite)}</div>
+                <div><strong>Scenes</strong><br>${escapeHtml(job.imgCount)}</div>
+                <div><strong>Rawdata Ready</strong><br>${escapeHtml(job.rawdataReady || '-')}</div>
+                <div><strong>Approver</strong><br>${escapeHtml(job.approver || '-')}</div>
+                <div><strong>Final deadline</strong><br>${escapeHtml(finalDl)}</div>
+              </div>
+              <div><strong>Steps</strong><br>${escapeHtml(steps)}</div>
+              <table class="table">
+                <thead>
+                  <tr><th>Role</th><th>Name</th><th>Start</th><th>End</th><th>Minutes</th></tr>
+                </thead>
+                <tbody>
+                  ${rows}
+                </tbody>
+              </table>
+            `;
+            openPrintWindow(job.name, printHtml);
+        };
+    }
+
+    openModal('orderSummaryModal');
+}
+
 // ==========================================
 // ARCHIVE & SUMMARY
 // ==========================================

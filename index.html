@@ -342,12 +342,14 @@
     <div id="orderSummaryModal" class="modal-overlay">
         <div class="modal-card">
             <div class="modal-header">
-                <h3>ใบสรุปการสั่งงาน</h3>
+                <h3>ใบเสร็จคำสั่งซื้อ (Order Receipt)</h3>
                 <button class="close-btn" onclick="closeModal('orderSummaryModal')">&times;</button>
             </div>
             <div class="modal-body" id="osBody"></div>
             <div class="modal-footer">
-                <button class="btn btn-primary" onclick="closeModal('orderSummaryModal'); document.querySelector('[data-target=\'dashboardPage\']').click();">กลับไป Dashboard</button>
+                <button class="btn btn-outline" id="osCopyBtn">คัดลอก</button>
+                <button class="btn btn-outline" id="osPrintBtn">พิมพ์</button>
+                <button class="btn btn-primary" onclick="closeModal('orderSummaryModal'); document.querySelector('[data-target=\'dashboardPage\']').click();">เสร็จสิ้น</button>
             </div>
         </div>
     </div>
