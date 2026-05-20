@@ -879,11 +879,17 @@ function renderMyWork() {
         const statusColor = getStatusColor(job.status);
         
         let actionButtons = '';
+        let bodyBlock = '';
         if(currentUser.role === 'Employee') {
             if(job.status === 'ordered') {
                 actionButtons = `<button class="btn btn-primary" onclick="startWorking('${job.id}')">▶ เริ่มทำงาน</button>`;
+                bodyBlock = `<div class="text-muted">กด “เริ่มทำงาน” เพื่อเริ่มกรอกข้อมูลสำหรับส่งตรวจ</div>`;
             } else if(job.status === 'working') {
-                actionButtons = `<button class="btn btn-primary" onclick="submitToQC('${job.id}')">📤 ส่งให้ QC ตรวจ</button>`;
+                actionButtons = `
+                    <button class="btn btn-outline" onclick="markWorkUpdated('${job.id}')">Update Work</button>
+                    <button class="btn btn-primary" onclick="workerCommitToQC('${job.id}')">Commit ส่งตรวจ (QC)</button>
+                `;
+                bodyBlock = renderWorkerCommitBlock(job);
             } else if(job.status === 'special_check') {
                 actionButtons = `<span style="color:var(--green-text);">✓ งานอนุมัติแล้ว รอแจ้งผู้สั่งงาน</span>`;
             } else if(job.status === 'completed') {
@@ -891,16 +897,23 @@ function renderMyWork() {
             }
         } else if(currentUser.role === 'Officer') {
             if(job.status === 'qc_check') {
-                actionButtons = `
-                    <button class="btn btn-primary" onclick="qcPass('${job.id}')">✅ ผ่าน QC</button>
+                const isAssigned = (job.qcOfficer === currentUser.name || job.qc === currentUser.name);
+                bodyBlock = renderOfficerQCBlock(job, isAssigned);
+                actionButtons = isAssigned ? `
+                    <button class="btn btn-primary" id="officerCommitBtn-${job.id}" onclick="officerCommitQC('${job.id}')" disabled>Commit</button>
                     <button class="btn btn-outline" onclick="qcFail('${job.id}')" style="color:var(--red-text);">❌ ไม่ผ่าน</button>
-                `;
+                ` : `<span class="text-muted">งานนี้ถูกมอบหมายให้ ${escapeHtml(job.qcOfficer || job.qc || '-')}</span>`;
+                // After render, update button enabled state
+                setTimeout(() => updateOfficerCommitEnabled(job.id), 0);
             }
         } else if(currentUser.role === 'Special Officer') {
             if(job.status === 'special_check') {
-                actionButtons = `
-                    <button class="btn btn-primary" onclick="specialApprove('${job.id}')">✅ Approve</button>
-                `;
+                const isAssigned = (job.specialOfficer === currentUser.name || job.specialQc === currentUser.name);
+                bodyBlock = renderSpecialOfficerBlock(job, isAssigned);
+                actionButtons = isAssigned
+                    ? `<button class="btn btn-primary" id="specialApproveBtn-${job.id}" onclick="specialOfficerApprove('${job.id}')" disabled>Approve</button>`
+                    : `<span class="text-muted">งานนี้ถูกมอบหมายให้ ${escapeHtml(job.specialOfficer || job.specialQc || '-')}</span>`;
+                setTimeout(() => updateSpecialApproveEnabled(job.id), 0);
             }
         }
         
@@ -914,17 +927,10 @@ function renderMyWork() {
                 <p><strong>Steps:</strong> ${job.steps.join(', ')}</p>
                 ${qcFeedbackHtml}
                 ${notesHtml}
-                
-                <div class="path-inputs" id="paths-${job.id}">
-                    <div class="path-row"><input type="text" placeholder="REFERENCE Path"></div>
-                    <div class="path-row"><input type="text" placeholder="RPC/Rec/Resampling/ORTHO Path"></div>
-                    <div class="path-row"><input type="text" placeholder="ENHANCE Path"></div>
-                    <div class="path-row"><input type="text" placeholder="MOSAIC Path"></div>
-                </div>
-                
-                <div style="margin-top:1rem; display:flex; gap:1rem;">
-                    <button class="btn btn-outline" onclick="addPathInput('${job.id}')">+ เพิ่มช่องข้อมูล</button>
-                    <button class="btn btn-primary" onclick="markWorkUpdated('${job.id}')">Update Work</button>
+                ${bodyBlock}
+
+                <div style="margin-top:1rem; display:flex; gap:1rem; flex-wrap:wrap;">
+                    ${actionButtons}
                 </div>
             </div>
         `;
@@ -940,7 +946,191 @@ function addPathInput(jobId) {
 }
 
 function markWorkUpdated(jobId) {
-    alert('Work updated.');
+    const job = findJobById(jobId);
+    if(!job) return;
+    const paths = readWorkerPathsFromDom(jobId);
+    job.workPaths = paths;
+    job.workUpdatedAt = new Date().toISOString();
+    saveAppState();
+    renderMyWork();
+}
+
+function readWorkerPathsFromDom(jobId) {
+    const container = document.getElementById(`paths-${jobId}`);
+    if(!container) return [];
+    return Array.from(container.querySelectorAll('input'))
+        .map(i => (i.value || '').trim())
+        .filter(Boolean);
+}
+
+function renderWorkerCommitBlock(job) {
+    const saved = Array.isArray(job.workPaths) ? job.workPaths : [];
+    const v = (idx) => saved[idx] || '';
+    const extra = saved.slice(4);
+    const extraRows = extra.map((p) => `<div class="path-row"><input type="text" value="${escapeHtml(p)}" placeholder="New Path"></div>`).join('');
+
+    return `
+      <div class="work-block">
+        <div class="work-block-title">Worker: กรอกข้อมูลส่งตรวจ</div>
+        <div class="path-inputs" id="paths-${job.id}">
+            <div class="path-row"><input type="text" value="${escapeHtml(v(0))}" placeholder="REFERENCE Path"></div>
+            <div class="path-row"><input type="text" value="${escapeHtml(v(1))}" placeholder="RPC/Rec/Resampling/ORTHO Path"></div>
+            <div class="path-row"><input type="text" value="${escapeHtml(v(2))}" placeholder="ENHANCE Path"></div>
+            <div class="path-row"><input type="text" value="${escapeHtml(v(3))}" placeholder="MOSAIC Path"></div>
+            ${extraRows}
+        </div>
+        <div style="margin-top:0.75rem;">
+          <button class="btn btn-outline" onclick="addPathInput('${job.id}')">+ เพิ่มช่องข้อมูล</button>
+        </div>
+      </div>
+    `;
+}
+
+function workerCommitToQC(jobId) {
+    const job = findJobById(jobId);
+    if(!job) return;
+
+    // Save latest form values first
+    const paths = readWorkerPathsFromDom(jobId);
+    job.workPaths = paths;
+    job.workCommittedAt = new Date().toISOString();
+
+    // Require 4 main fields (reference/rpc/enhance/mosaic) before commit
+    const container = document.getElementById(`paths-${jobId}`);
+    const inputs = container ? Array.from(container.querySelectorAll('input')).slice(0, 4) : [];
+    const coreOk = inputs.length === 4 && inputs.every(i => (i.value || '').trim().length > 0);
+    if(!coreOk) {
+        alert('กรุณากรอก 4 ช่องหลักให้ครบ (REFERENCE / RPC/ORTHO / ENHANCE / MOSAIC) ก่อน Commit');
+        return;
+    }
+
+    saveAppState();
+
+    // Then move workflow to QC
+    submitToQC(jobId);
+}
+
+const OFFICER_QC_CHECK_KEYS = [
+    'Image File',
+    'Log File',
+    'File Format',
+    'File Type',
+    'Coordinate System'
+];
+
+const SPECIAL_OFFICER_CHECK_KEYS = [
+    'ความครบถ้วนรายละเอียด',
+    'ความสว่าง',
+    'ความคมชัดและสี',
+    'ขอบของข้อมูลภาพ',
+    'พื้นหลังข้อมูลภาพ',
+    'Compression'
+];
+
+function ensureChecklist(job, kind) {
+    const key = (kind === 'officer') ? 'officerQcChecklist' : 'specialOfficerChecklist';
+    const defaults = (kind === 'officer') ? OFFICER_QC_CHECK_KEYS : SPECIAL_OFFICER_CHECK_KEYS;
+    if(!job[key] || typeof job[key] !== 'object') job[key] = {};
+    defaults.forEach(k => { if(job[key][k] !== true) job[key][k] = false; });
+    return job[key];
+}
+
+function renderChecklist(job, kind, enabled) {
+    const list = ensureChecklist(job, kind);
+    const keys = (kind === 'officer') ? OFFICER_QC_CHECK_KEYS : SPECIAL_OFFICER_CHECK_KEYS;
+    const title = (kind === 'officer') ? 'Officer QC: ตรวจสอบก่อน Commit' : 'Special Officer: ตรวจสอบก่อน Approve';
+    const rowFn = (k) => {
+        const checked = list[k] === true ? 'checked' : '';
+        const dis = enabled ? '' : 'disabled';
+        const onChange = enabled
+            ? `onchange="${kind}ChecklistToggle('${job.id}', '${escapeHtml(k)}', this.checked)"`
+            : '';
+        return `<label class="check-row"><input type="checkbox" ${checked} ${dis} ${onChange} /> <span>${escapeHtml(k)}</span></label>`;
+    };
+
+    return `
+      <div class="work-block">
+        <div class="work-block-title">${escapeHtml(title)}</div>
+        <div class="check-grid">
+          ${keys.map(rowFn).join('')}
+        </div>
+        <div class="text-muted" style="margin-top:0.5rem;">ต้องติ๊กให้ครบทุกข้อเท่านั้นถึงจะกด Commit/Approve ได้</div>
+      </div>
+    `;
+}
+
+function renderOfficerQCBlock(job, enabled) {
+    return renderChecklist(job, 'officer', enabled);
+}
+
+function renderSpecialOfficerBlock(job, enabled) {
+    return renderChecklist(job, 'special', enabled);
+}
+
+function officerChecklistToggle(jobId, key, checked) {
+    const job = findJobById(jobId);
+    if(!job) return;
+    const list = ensureChecklist(job, 'officer');
+    list[key] = !!checked;
+    job.officerQcChecklist = list;
+    saveAppState();
+    updateOfficerCommitEnabled(jobId);
+}
+
+function specialChecklistToggle(jobId, key, checked) {
+    const job = findJobById(jobId);
+    if(!job) return;
+    const list = ensureChecklist(job, 'special');
+    list[key] = !!checked;
+    job.specialOfficerChecklist = list;
+    saveAppState();
+    updateSpecialApproveEnabled(jobId);
+}
+
+function isAllChecked(obj, keys) {
+    return keys.every(k => obj && obj[k] === true);
+}
+
+function updateOfficerCommitEnabled(jobId) {
+    const job = findJobById(jobId);
+    const btn = document.getElementById(`officerCommitBtn-${jobId}`);
+    if(!job || !btn) return;
+    const list = ensureChecklist(job, 'officer');
+    btn.disabled = !isAllChecked(list, OFFICER_QC_CHECK_KEYS);
+}
+
+function updateSpecialApproveEnabled(jobId) {
+    const job = findJobById(jobId);
+    const btn = document.getElementById(`specialApproveBtn-${jobId}`);
+    if(!job || !btn) return;
+    const list = ensureChecklist(job, 'special');
+    btn.disabled = !isAllChecked(list, SPECIAL_OFFICER_CHECK_KEYS);
+}
+
+function officerCommitQC(jobId) {
+    const job = findJobById(jobId);
+    if(!job) return;
+    const list = ensureChecklist(job, 'officer');
+    if(!isAllChecked(list, OFFICER_QC_CHECK_KEYS)) {
+        alert('กรุณาติ๊ก Officer QC ให้ครบทุกข้อก่อน Commit');
+        return;
+    }
+    job.officerCommittedAt = new Date().toISOString();
+    saveAppState();
+    qcPass(jobId);
+}
+
+function specialOfficerApprove(jobId) {
+    const job = findJobById(jobId);
+    if(!job) return;
+    const list = ensureChecklist(job, 'special');
+    if(!isAllChecked(list, SPECIAL_OFFICER_CHECK_KEYS)) {
+        alert('กรุณาติ๊ก Special Officer ให้ครบทุกข้อก่อน Approve');
+        return;
+    }
+    job.specialCommittedAt = new Date().toISOString();
+    saveAppState();
+    specialApprove(jobId);
 }
 
 function setupCalendarControls() {
