@@ -811,6 +811,10 @@ function renderDashboard() {
     if(specialGrid) specialGrid.innerHTML = '';
 
     members.forEach(m => {
+        const proc = getMemberActiveProcess(m.name);
+        const procHtml = proc
+            ? `<div class="member-process" title="${escapeHtml(proc.jobName)}">${escapeHtml(proc.label)}</div>`
+            : `<div class="member-process text-muted">ไม่มีงานที่กำลังทำ</div>`;
         const cardHtml = `
             <div class="member-card" onclick="openProfile('${m.name}')">
                 <div class="member-header">
@@ -821,6 +825,7 @@ function renderDashboard() {
                 <div style="margin-top:0.5rem; font-size:0.85rem; color:var(--text-muted);">
                     Load: ${m.mins} mins
                 </div>
+                ${procHtml}
                 ${currentUser.role === 'Officer' ? `
                     <div class="admin-card-controls" onclick="event.stopPropagation()">
                         <button class="btn btn-outline" onclick="forceStatus('${m.name}', 'Offline')">ออฟไลน์</button>
@@ -1078,48 +1083,57 @@ function getMemberActiveProcess(memberName) {
 }
 
 function renderStatus() {
-    recalculateMembers();
     const list = document.getElementById('statusList');
     if(!list) return;
 
-    const roleOrder = { 'Employee': 1, 'Officer': 2, 'Special Officer': 3, 'Admin': 4 };
-    const sorted = [...members].sort((a, b) => {
-        const ra = roleOrder[a.role] ?? 99;
-        const rb = roleOrder[b.role] ?? 99;
-        if(ra !== rb) return ra - rb;
-        return a.name.localeCompare(b.name);
-    });
-
     list.innerHTML = '';
 
-    sorted.forEach(m => {
-        const proc = getMemberActiveProcess(m.name);
-        const statusBadge = `<span class="status-badge ${m.status.toLowerCase()}">${m.status}</span>`;
-        const accept = (m.acceptJobs === false) ? `<span class="status-badge offline">ปิดรับงาน</span>` : `<span class="status-badge available">รับงาน</span>`;
+    const activeJobs = [...jobs].sort((a, b) => (a.queuePosition || 0) - (b.queuePosition || 0));
+    if(activeJobs.length === 0) {
+        list.innerHTML = `<p class="text-muted">ไม่มีออเดอร์ที่กำลังทำอยู่</p>`;
+        return;
+    }
 
-        let processHtml = `<div class="status-process text-muted">ไม่มีงานที่กำลังทำ</div>`;
-        if(proc) {
-            processHtml = `
-              <div class="status-process">
-                <div class="status-process-title">${escapeHtml(proc.label)}</div>
-                <div class="status-process-sub">${escapeHtml(proc.jobName)}</div>
-              </div>
-            `;
+    activeJobs.forEach(job => {
+        const status = getStatusLabel(job.status);
+        const statusClass = getStatusColor(job.status);
+
+        let processLabel = 'รอเริ่มงาน';
+        let processOwner = job.worker || '-';
+        if(job.status === 'ordered' || job.status === 'working') {
+            processLabel = 'กำลังปรับแก้ภาพถ่ายดาวเทียม (Employee)';
+            processOwner = job.worker || '-';
+        } else if(job.status === 'qc_check') {
+            processLabel = 'อยู่ระหว่างตรวจสอบคุณภาพผลิตภัณฑ์ (Officer QC)';
+            processOwner = job.qcOfficer || job.qc || '-';
+        } else if(job.status === 'special_check') {
+            processLabel = 'อยู่ระหว่างตรวจสอบคุณภาพผลิตภัณฑ์ (Special Officer Approve ก่อนส่ง)';
+            processOwner = job.specialOfficer || job.specialQc || '-';
+        } else if(job.status === 'completed') {
+            processLabel = 'เสร็จสิ้น';
+            processOwner = '-';
         }
 
+        const steps = (job.steps || []).join(', ');
         list.innerHTML += `
-          <div class="status-card">
+          <div class="status-card" onclick="openCalendarJobDetail('${job.id}')">
             <div class="status-card-top">
               <div>
-                <div class="status-name">${escapeHtml(m.name)}</div>
-                <div class="status-role">${escapeHtml(m.role)}</div>
+                <div class="status-name">${escapeHtml(job.name)}</div>
+                <div class="status-role">${escapeHtml(job.satellite)} | ${escapeHtml(job.imgCount)} scenes</div>
               </div>
               <div class="status-badges">
-                ${statusBadge}
-                ${accept}
+                <span class="status-badge ${statusClass}">${escapeHtml(status)}</span>
               </div>
             </div>
-            ${processHtml}
+            <div class="status-process">
+              <div class="status-process-title">${escapeHtml(processLabel)}</div>
+              <div class="status-process-sub">${escapeHtml(processOwner)}</div>
+            </div>
+            <div class="status-process" style="margin-top:8px;">
+              <div class="status-process-title">Steps</div>
+              <div class="status-process-sub">${escapeHtml(steps || '-')}</div>
+            </div>
           </div>
         `;
     });
