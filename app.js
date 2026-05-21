@@ -948,7 +948,7 @@ function renderMyWork() {
             } else if(job.status === 'working') {
                 actionButtons = `
                     <button class="btn btn-outline" onclick="markWorkUpdated('${job.id}')">Update Work</button>
-                    <button class="btn btn-primary" onclick="workerCommitToQC('${job.id}')">Commit ส่งตรวจ (QC)</button>
+                    <button class="btn btn-primary" onclick="workerCommitToQC('${job.id}')">${job.reworkRequired ? 'ส่งตรวจใหม่ (QC)' : 'Commit ส่งตรวจ (QC)'}</button>
                 `;
                 bodyBlock = renderWorkerCommitBlock(job);
             } else if(job.status === 'special_check') {
@@ -1117,6 +1117,8 @@ function stageRejectCommit() {
         // Send back to worker for fixes
         job.status = 'working';
         job.returnedByQCAt = new Date().toISOString();
+        job.reworkRequired = true;
+        job.reworkStage = 'officer';
         job.qcFeedback = Array.isArray(job.qcFeedback) ? job.qcFeedback : [];
         job.qcFeedback.push({ date: new Date().toISOString(), message: `Officer Reject: ${note}` });
         // Reset officer checklist so next QC re-check is clean
@@ -1132,6 +1134,8 @@ function stageRejectCommit() {
         // Send back to worker for fixes
         job.status = 'working';
         job.returnedBySpecialAt = new Date().toISOString();
+        job.reworkRequired = true;
+        job.reworkStage = 'special';
         job.specialFeedback = Array.isArray(job.specialFeedback) ? job.specialFeedback : [];
         job.specialFeedback.push({ date: new Date().toISOString(), message: `Special Reject: ${note}` });
         // Reset special checklist so next approve re-check is clean
@@ -1192,9 +1196,14 @@ function renderWorkerCommitBlock(job) {
     const extra = saved.slice(4);
     const extraRows = extra.map((p) => `<div class="path-row"><input type="text" value="${escapeHtml(p)}" placeholder="New Path"></div>`).join('');
 
+    const reworkBanner = job.reworkRequired
+        ? `<div class="work-note" style="border-left-color:var(--red-text);">งานถูก Reject จาก ${escapeHtml(job.reworkStage === 'special' ? 'Special Officer' : 'Officer QC')} กรุณาแก้ไขข้อมูลและส่งตรวจใหม่</div>`
+        : '';
+
     return `
       <div class="work-block">
         <div class="work-block-title">Worker: กรอกข้อมูลส่งตรวจ</div>
+        ${reworkBanner}
         <div class="path-inputs" id="paths-${job.id}">
             <div class="path-row"><input type="text" value="${escapeHtml(v(0))}" placeholder="REFERENCE Path"></div>
             <div class="path-row"><input type="text" value="${escapeHtml(v(1))}" placeholder="RPC/Rec/Resampling/ORTHO Path"></div>
@@ -2234,6 +2243,11 @@ function submitToQC(jobId) {
     if(job) {
         job.status = 'qc_check';
         job.submittedToQCAt = new Date().toISOString();
+        // Clear rework flag once worker re-submits
+        if(job.reworkRequired) {
+            job.reworkRequired = false;
+            job.reworkStage = null;
+        }
         saveAppState();
         // Notify Officer QC
         const officerName = job.qcOfficer || job.qc;
