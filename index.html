@@ -405,6 +405,27 @@
         </div>
     </div>
 
+    <!-- Stage Reject Modal (Officer/Special) -->
+    <div id="stageRejectModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="srTitle">Reject</h3>
+                <button class="close-btn" onclick="closeModal('stageRejectModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="srInfo" class="text-muted" style="margin-bottom:0.75rem;"></div>
+                <div class="form-group">
+                    <label>หมายเหตุ</label>
+                    <textarea id="srReason" placeholder="ระบุหมายเหตุ/รายละเอียด"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('stageRejectModal')">ยกเลิก</button>
+                <button class="btn btn-primary" id="srConfirmBtn">ยืนยัน Reject</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Admin Modal -->
     <div id="adminModal" class="modal-overlay">
         <div class="modal-card modal-lg">

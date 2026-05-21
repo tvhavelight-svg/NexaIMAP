@@ -964,7 +964,7 @@ function renderMyWork() {
                 bodyBlock = renderOfficerQCBlock(job, isAssigned);
                 actionButtons = isAssigned ? `
                     <button class="btn btn-primary" id="officerCommitBtn-${job.id}" onclick="officerCommitQC('${job.id}')" disabled>Commit</button>
-                    <button class="btn btn-outline" onclick="qcFail('${job.id}')" style="color:var(--red-text);">❌ ไม่ผ่าน</button>
+                    <button class="btn btn-outline" onclick="openStageReject('officer','${job.id}')" style="color:var(--red-text);">Reject</button>
                 ` : `<span class="text-muted">งานนี้ถูกมอบหมายให้ ${escapeHtml(job.qcOfficer || job.qc || '-')}</span>`;
                 // After render, update button enabled state
                 setTimeout(() => updateOfficerCommitEnabled(job.id), 0);
@@ -974,7 +974,10 @@ function renderMyWork() {
                 const isAssigned = (job.specialOfficer === currentUser.name || job.specialQc === currentUser.name);
                 bodyBlock = renderSpecialOfficerBlock(job, isAssigned);
                 actionButtons = isAssigned
-                    ? `<button class="btn btn-primary" id="specialApproveBtn-${job.id}" onclick="specialOfficerApprove('${job.id}')" disabled>Approve</button>`
+                    ? `
+                        <button class="btn btn-primary" id="specialApproveBtn-${job.id}" onclick="specialOfficerApprove('${job.id}')" disabled>Approve</button>
+                        <button class="btn btn-outline" onclick="openStageReject('special','${job.id}')" style="color:var(--red-text);">Reject</button>
+                      `
                     : `<span class="text-muted">งานนี้ถูกมอบหมายให้ ${escapeHtml(job.specialOfficer || job.specialQc || '-')}</span>`;
                 setTimeout(() => updateSpecialApproveEnabled(job.id), 0);
             }
@@ -1029,6 +1032,7 @@ function renderWorkerOrderDetail(job) {
 }
 
 let activeWorkerRejectJobId = null;
+let activeStageReject = { jobId: null, kind: null };
 
 function openWorkerReject(jobId) {
     const job = findJobById(jobId);
@@ -1058,6 +1062,7 @@ function workerRejectJob(jobId) {
     job.rejectedBy = currentUser.name;
     job.rejectedAt = new Date().toISOString();
     job.rejectReason = reason;
+    job.rejectedStage = 'worker';
     job.completedAt = job.rejectedAt;
 
     // Remove from active jobs list and move to archive so it won't keep blocking queue.
@@ -1070,9 +1075,80 @@ function workerRejectJob(jobId) {
     saveAppState();
     // Notify requester (คนสั่งงาน) if present
     if(job.requestedBy) {
-        notifyUserOfJob(job.requestedBy, job.id, 'งานถูก Reject', `${job.name} ถูก Reject โดย ${currentUser.name}`);
+        const detail = buildOrderReceiptText(job).replaceAll('\n', ' | ');
+        notifyUserOfJob(job.requestedBy, job.id, 'งานถูก Reject', `${job.name} ถูก Reject โดย ${currentUser.name} • เหตุผล: ${reason} • ${detail}`);
     }
     closeModal('workerRejectModal');
+    renderMyWork();
+    renderDashboard();
+}
+
+function openStageReject(kind, jobId) {
+    const job = findJobById(jobId);
+    if(!job) return;
+    activeStageReject = { kind, jobId };
+
+    const titleEl = document.getElementById('srTitle');
+    const infoEl = document.getElementById('srInfo');
+    const reasonEl = document.getElementById('srReason');
+    const confirmBtn = document.getElementById('srConfirmBtn');
+
+    const roleLabel = kind === 'officer' ? 'Officer QC' : 'Special Officer';
+    if(titleEl) titleEl.textContent = `${roleLabel}: Reject`;
+    if(infoEl) infoEl.textContent = `${job.name} • ${job.satellite || '-'} • ${job.imgCount} scenes`;
+    if(reasonEl) reasonEl.value = '';
+    if(confirmBtn) confirmBtn.onclick = () => stageRejectCommit();
+
+    openModal('stageRejectModal');
+}
+
+function stageRejectCommit() {
+    const jobId = activeStageReject.jobId;
+    const kind = activeStageReject.kind;
+    const job = findJobById(jobId);
+    if(!job || !kind) return;
+    const note = document.getElementById('srReason')?.value.trim();
+    if(!note) {
+        alert('กรุณากรอกหมายเหตุก่อน Reject');
+        return;
+    }
+
+    job.rejections = Array.isArray(job.rejections) ? job.rejections : [];
+    job.rejections.push({ stage: kind, by: currentUser?.name || '-', at: new Date().toISOString(), note });
+
+    if(kind === 'officer') {
+        // Send back to worker for fixes
+        job.status = 'working';
+        job.returnedByQCAt = new Date().toISOString();
+        job.qcFeedback = Array.isArray(job.qcFeedback) ? job.qcFeedback : [];
+        job.qcFeedback.push({ date: new Date().toISOString(), message: `Officer Reject: ${note}` });
+        // Reset officer checklist so next QC re-check is clean
+        if(job.officerQcChecklist && typeof job.officerQcChecklist === 'object') {
+            OFFICER_QC_CHECK_KEYS.forEach(k => { job.officerQcChecklist[k] = false; });
+        }
+        saveAppState();
+        // Notify worker
+        notifyUserOfJob(job.worker, job.id, 'งานถูก Reject จาก QC', `${job.name} ถูก Reject โดย ${currentUser.name} • หมายเหตุ: ${note}`);
+    }
+
+    if(kind === 'special') {
+        // Send back to worker for fixes
+        job.status = 'working';
+        job.returnedBySpecialAt = new Date().toISOString();
+        job.specialFeedback = Array.isArray(job.specialFeedback) ? job.specialFeedback : [];
+        job.specialFeedback.push({ date: new Date().toISOString(), message: `Special Reject: ${note}` });
+        // Reset special checklist so next approve re-check is clean
+        if(job.specialOfficerChecklist && typeof job.specialOfficerChecklist === 'object') {
+            SPECIAL_OFFICER_CHECK_KEYS.forEach(k => { job.specialOfficerChecklist[k] = false; });
+        }
+        // Also reset QC stage marker so worker must send to QC again
+        job.qcPassedAt = null;
+        saveAppState();
+        // Notify worker
+        notifyUserOfJob(job.worker, job.id, 'งานถูก Reject จาก Approve', `${job.name} ถูก Reject โดย ${currentUser.name} • หมายเหตุ: ${note}`);
+    }
+
+    closeModal('stageRejectModal');
     renderMyWork();
     renderDashboard();
 }
@@ -1855,10 +1931,17 @@ function openNotificationTarget(id) {
     if(!n) return;
     markNotificationRead(id);
     closeModal('notificationsModal');
+    // Users (sales/requesters) don't have My Work. Open details from dashboard.
+    if(currentUser?.role === 'User') {
+        navigateToPage('dashboardPage');
+        if(n.jobId) setTimeout(() => openCalendarJobDetail(n.jobId), 120);
+        return;
+    }
+
     navigateToPage('myWorkPage');
     if(n.jobId) {
         setTimeout(() => {
-            // Render first, then jump to the Accept/Reject card (Worker) or the relevant task card.
+            // Render first, then jump to the task card (Accept/Reject for Worker).
             renderMyWork();
             setTimeout(() => focusMyWorkJob(n.jobId), 50);
         }, 120);
