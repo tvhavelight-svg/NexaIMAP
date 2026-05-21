@@ -161,6 +161,60 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); border-color: tr
     padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px var(--shadow);
 }
 .text-muted { color: var(--text-muted); }
+.icon-btn{
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+.icon-btn:hover{ background: var(--surface2); }
+.icon-btn .icon{ width: 18px; height: 18px; }
+.notif-badge{
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 18px;
+    text-align: center;
+    border: 2px solid var(--surface);
+}
+.notif-item{
+    display:flex;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    cursor: pointer;
+}
+.notif-item + .notif-item{ margin-top: 10px; }
+.notif-dot{
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    margin-top: 6px;
+    flex: 0 0 auto;
+    background: var(--text-muted);
+}
+.notif-item.unread .notif-dot{ background: var(--accent); }
+.notif-main{ flex: 1 1 auto; min-width: 0; }
+.notif-title{ font-weight: 900; }
+.notif-meta{ color: var(--text-muted); font-size: 12px; margin-top: 2px; }
 .work-block { margin-top: 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: 10px; background: var(--surface2); }
 .work-block-title { font-weight: 800; margin-bottom: 0.75rem; }
 .check-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem 1rem; }

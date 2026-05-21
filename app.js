@@ -11,6 +11,7 @@ const firebaseConfig = {
 };
 
 let db;
+let notifications = [];
 
 function initFirebase() {
     firebase.initializeApp(firebaseConfig);
@@ -37,6 +38,7 @@ function loadFromFirestore() {
             members = data.members || initialMembers;
             jobs = data.jobs || [];
             archivedJobs = data.archivedJobs || [];
+            notifications = Array.isArray(data.notifications) ? data.notifications : [];
 
             // Backfill officer defaults (do not override non-empty custom settings).
             members = members.map(member => {
@@ -57,6 +59,13 @@ function loadFromFirestore() {
             if(!adminExists) {
                 members.unshift({ name: 'admin', role: 'Admin', allowed: [...PROCESS_KEYS], status: 'Available', mins: 0, forceStatus: null });
             }
+
+            // Ensure sales users exist (requesters)
+            const ensureUser = (name) => {
+                if(members.some(m => m.name === name)) return;
+                members.push({ name, role: 'User', allowed: [], acceptJobs: false, status: 'Available', mins: 0, forceStatus: null });
+            };
+            ['sale1','sale2','sale3','sale4','sale5'].forEach(ensureUser);
             
             // Restore current user
             if(data.currentUserName) {
@@ -74,6 +83,7 @@ function loadFromFirestore() {
                 renderDashboard();
                 renderMyWork();
                 renderCalendar();
+                renderNotificationsUI();
             }
         } else {
             console.log('No data in Firestore, saving initial state...');
@@ -117,6 +127,7 @@ function saveToFirestore() {
         members: members,
         jobs: jobs,
         archivedJobs: archivedJobs,
+        notifications: notifications,
         currentUserName: currentUser?.name || null,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
@@ -289,6 +300,13 @@ const empSteps = [...PROCESS_KEYS];
 const initialMembers = [
     // Admin
     { name: 'admin', role: 'Admin', allowed: [...PROCESS_KEYS], status: 'Available', mins: 0, forceStatus: null },
+
+    // Requesters (Sales users) - can order but will never be assigned work
+    { name: 'sale1', role: 'User', allowed: [], acceptJobs: false, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'sale2', role: 'User', allowed: [], acceptJobs: false, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'sale3', role: 'User', allowed: [], acceptJobs: false, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'sale4', role: 'User', allowed: [], acceptJobs: false, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'sale5', role: 'User', allowed: [], acceptJobs: false, status: 'Available', mins: 0, forceStatus: null },
     
     // Employees (7) - start with no permissions; must be ticked in Manage Permissions.
     { name: 'joy', role: 'Employee', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
@@ -367,6 +385,7 @@ function showAppForCurrentUser() {
     }
     
     initApp();
+    renderNotificationsUI();
 }
 
 function resetAllData() {
@@ -375,6 +394,7 @@ function resetAllData() {
     
     jobs = [];
     archivedJobs = [];
+    notifications = [];
     saveToFirestore();
     alert('รีเซทสำเร็จ');
     renderDashboard();
@@ -750,10 +770,20 @@ if(myWorkTopBtn) {
     myWorkTopBtn.addEventListener('click', () => navigateToPage('myWorkPage'));
 }
 
+const notifBtn = document.getElementById('notifBtn');
+if(notifBtn) {
+    notifBtn.addEventListener('click', () => openNotifications());
+}
+const notifMarkAllBtn = document.getElementById('notifMarkAllBtn');
+if(notifMarkAllBtn) {
+    notifMarkAllBtn.addEventListener('click', () => markAllNotificationsRead());
+}
+
 function initApp() {
     renderDashboard();
     setupOrderForm();
     setupCalendarControls();
+    renderNotificationsUI();
 }
 
 function renderPage(pageId) {
@@ -1027,6 +1057,10 @@ function workerRejectJob(jobId) {
     }
 
     saveAppState();
+    // Notify requester (คนสั่งงาน) if present
+    if(job.requestedBy) {
+        notifyUserOfJob(job.requestedBy, job.id, 'งานถูก Reject', `${job.name} ถูก Reject โดย ${currentUser.name}`);
+    }
     closeModal('workerRejectModal');
     renderMyWork();
     renderDashboard();
@@ -1713,9 +1747,119 @@ function showOrderConfirm(draft) {
         
         // Show summary/ใบสรุป
         showOrderSummary(draft);
+
+        // Notify assigned worker
+        notifyUserOfJob(draft.worker, draft.id, `มีงานใหม่ส่งให้คุณ`, `${draft.name} (${draft.satellite}) จำนวน ${draft.imgCount} ภาพ`);
     };
     
     openModal('orderConfirmModal');
+}
+
+// ==========================================
+// NOTIFICATIONS
+// ==========================================
+function makeId(prefix) {
+    return `${prefix}${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function notifyUserOfJob(toUser, jobId, title, message) {
+    if(!toUser) return;
+    const job = findJobById(jobId);
+    const jobName = job?.name || '';
+    notifications.unshift({
+        id: makeId('N'),
+        to: String(toUser),
+        jobId,
+        jobName,
+        title,
+        message,
+        createdAt: new Date().toISOString(),
+        readAt: null
+    });
+    saveAppState();
+    renderNotificationsUI();
+}
+
+function getMyNotifications() {
+    if(!currentUser) return [];
+    return notifications.filter(n => n && n.to === currentUser.name);
+}
+
+function getUnreadCount() {
+    return getMyNotifications().filter(n => !n.readAt).length;
+}
+
+function renderNotificationsUI() {
+    const btn = document.getElementById('notifBtn');
+    const badge = document.getElementById('notifBadge');
+    if(!btn || !badge) return;
+    const count = getUnreadCount();
+    if(count > 0) {
+        badge.style.display = 'inline-block';
+        badge.textContent = String(count);
+    } else {
+        badge.style.display = 'none';
+        badge.textContent = '0';
+    }
+}
+
+function openNotifications() {
+    const listEl = document.getElementById('notifList');
+    if(!listEl) return;
+    const items = getMyNotifications();
+    if(items.length === 0) {
+        listEl.innerHTML = `<div class="text-muted">ยังไม่มีการแจ้งเตือน</div>`;
+        openModal('notificationsModal');
+        return;
+    }
+
+    listEl.innerHTML = items.map(n => {
+        const unread = !n.readAt;
+        const when = n.createdAt ? new Date(n.createdAt).toLocaleString('th-TH') : '';
+        return `
+          <div class="notif-item ${unread ? 'unread' : ''}" onclick="openNotificationTarget('${n.id}')">
+            <div class="notif-dot"></div>
+            <div class="notif-main">
+              <div class="notif-title">${escapeHtml(n.title || 'Notification')}</div>
+              <div class="notif-meta">${escapeHtml(n.message || '')}</div>
+              <div class="notif-meta">${escapeHtml(when)}</div>
+            </div>
+          </div>
+        `;
+    }).join('');
+
+    openModal('notificationsModal');
+}
+
+function markNotificationRead(id) {
+    const n = notifications.find(x => x && x.id === id);
+    if(!n) return;
+    if(!n.readAt) n.readAt = new Date().toISOString();
+    saveAppState();
+    renderNotificationsUI();
+}
+
+function openNotificationTarget(id) {
+    const n = notifications.find(x => x && x.id === id);
+    if(!n) return;
+    markNotificationRead(id);
+    closeModal('notificationsModal');
+    navigateToPage('myWorkPage');
+    // Ensure we can open details even if job is archived
+    if(n.jobId) {
+        setTimeout(() => {
+            openCalendarJobDetail(n.jobId);
+        }, 120);
+    }
+}
+
+function markAllNotificationsRead() {
+    const mine = getMyNotifications();
+    const now = new Date().toISOString();
+    mine.forEach(n => { if(!n.readAt) n.readAt = now; });
+    saveAppState();
+    renderNotificationsUI();
+    openNotifications();
 }
 
 function escapeHtml(text) {
@@ -1999,6 +2143,9 @@ function submitToQC(jobId) {
         job.status = 'qc_check';
         job.submittedToQCAt = new Date().toISOString();
         saveAppState();
+        // Notify Officer QC
+        const officerName = job.qcOfficer || job.qc;
+        notifyUserOfJob(officerName, job.id, 'มีงานต้อง QC', `${job.name} รอตรวจ QC`);
         renderMyWork();
     }
 }
@@ -2009,6 +2156,9 @@ function qcPass(jobId) {
         job.status = 'special_check';
         job.qcPassedAt = new Date().toISOString();
         saveAppState();
+        // Notify Special Officer for approve
+        const specialName = job.specialOfficer || job.specialQc;
+        notifyUserOfJob(specialName, job.id, 'มีงานต้อง Approve', `${job.name} รอ Approve`);
         renderMyWork();
     }
 }

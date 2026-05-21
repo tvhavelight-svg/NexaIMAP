@@ -36,6 +36,13 @@
             </div>
             <div class="user-controls">
                 <span id="currentUserDisplay" class="user-name"></span>
+                <button id="notifBtn" class="icon-btn" title="Notifications" aria-label="Notifications">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                    </svg>
+                    <span id="notifBadge" class="notif-badge" style="display:none;">0</span>
+                </button>
                 <button id="myWorkTopBtn" class="btn btn-outline">งานของฉัน</button>
 <button id="adminBtn" class="btn btn-outline" style="display:none;">Admin</button>
                 <button id="resetBtn" class="btn btn-outline" style="display:none;">Reset Data</button>
@@ -379,6 +386,21 @@
             <div class="modal-footer">
                 <button class="btn btn-outline" onclick="closeModal('workerRejectModal')">ยกเลิก</button>
                 <button class="btn btn-primary" id="wrConfirmBtn">ยืนยัน Reject</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications Modal -->
+    <div id="notificationsModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Notifications</h3>
+                <button class="close-btn" onclick="closeModal('notificationsModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="notifList"></div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="notifMarkAllBtn">Mark all read</button>
+                <button class="btn btn-primary" onclick="closeModal('notificationsModal')">ปิด</button>
             </div>
         </div>
     </div>
