@@ -914,15 +914,16 @@ function renderMyWork() {
     myJobs.forEach((job, index) => {
         let notesHtml = (job.notes || []).map(n => `<div class="work-note">โน้ต: ${n}</div>`).join('');
         let qcFeedbackHtml = (job.qcFeedback || []).map(f => `<div class="work-note" style="border-left-color:var(--red-text);">QC ไม่ผ่าน: ${f.message} (${new Date(f.date).toLocaleString()})</div>`).join('');
-        
-        const roleLabel = currentUser.role === 'Employee'
-            ? 'Worker'
-            : currentUser.role === 'Officer'
-                ? 'Officer QC'
-                : 'Special Officer';
-        const mins = currentUser.role === 'Employee'
+
+        // Officers can be assigned as Worker too. Determine "my role for this job" by assignment, not by account role.
+        const isMyWorker = job.worker === currentUser.name;
+        const isMyOfficerQC = (job.qcOfficer === currentUser.name || job.qc === currentUser.name);
+        const isMySpecial = (job.specialOfficer === currentUser.name || job.specialQc === currentUser.name);
+
+        const roleLabel = isMyWorker ? 'Worker' : (isMyOfficerQC ? 'Officer QC' : (isMySpecial ? 'Special Officer' : currentUser.role));
+        const mins = isMyWorker
             ? (job.workerMins || job.estimatedMinutes || 0)
-            : currentUser.role === 'Officer'
+            : isMyOfficerQC
                 ? (job.qcMins || job.qcImageMins || 0)
                 : (job.qcSentMins || job.specialMins || 0);
         
@@ -931,7 +932,7 @@ function renderMyWork() {
         
         let actionButtons = '';
         let bodyBlock = '';
-        if(currentUser.role === 'Employee') {
+        if(isMyWorker) {
             if(job.status === 'ordered') {
                 const accepted = job.workerAccepted === true;
                 if(!accepted) {
@@ -958,27 +959,23 @@ function renderMyWork() {
                 actionButtons = `<span class="text-muted">งานถูก Reject แล้ว</span>`;
                 bodyBlock = `<div class="text-muted">${escapeHtml(job.rejectReason || '')}</div>`;
             }
-        } else if(currentUser.role === 'Officer') {
+        } else if(isMyOfficerQC) {
             if(job.status === 'qc_check') {
-                const isAssigned = (job.qcOfficer === currentUser.name || job.qc === currentUser.name);
-                bodyBlock = renderOfficerQCBlock(job, isAssigned);
-                actionButtons = isAssigned ? `
+                bodyBlock = renderOfficerQCBlock(job, true);
+                actionButtons = `
                     <button class="btn btn-primary" id="officerCommitBtn-${job.id}" onclick="officerCommitQC('${job.id}')" disabled>Commit</button>
                     <button class="btn btn-outline" onclick="openStageReject('officer','${job.id}')" style="color:var(--red-text);">Reject</button>
-                ` : `<span class="text-muted">งานนี้ถูกมอบหมายให้ ${escapeHtml(job.qcOfficer || job.qc || '-')}</span>`;
+                `;
                 // After render, update button enabled state
                 setTimeout(() => updateOfficerCommitEnabled(job.id), 0);
             }
-        } else if(currentUser.role === 'Special Officer') {
+        } else if(isMySpecial) {
             if(job.status === 'special_check') {
-                const isAssigned = (job.specialOfficer === currentUser.name || job.specialQc === currentUser.name);
-                bodyBlock = renderSpecialOfficerBlock(job, isAssigned);
-                actionButtons = isAssigned
-                    ? `
+                bodyBlock = renderSpecialOfficerBlock(job, true);
+                actionButtons = `
                         <button class="btn btn-primary" id="specialApproveBtn-${job.id}" onclick="specialOfficerApprove('${job.id}')" disabled>Approve</button>
                         <button class="btn btn-outline" onclick="openStageReject('special','${job.id}')" style="color:var(--red-text);">Reject</button>
-                      `
-                    : `<span class="text-muted">งานนี้ถูกมอบหมายให้ ${escapeHtml(job.specialOfficer || job.specialQc || '-')}</span>`;
+                      `;
                 setTimeout(() => updateSpecialApproveEnabled(job.id), 0);
             }
         }
