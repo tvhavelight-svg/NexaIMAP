@@ -981,7 +981,7 @@ function renderMyWork() {
         }
         
         list.innerHTML += `
-            <div class="work-item">
+            <div class="work-item" id="mywork-${job.id}">
                 <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
                     <h3>${job.name}</h3>
                     <span class="status-badge ${statusColor}">${statusLabel}</span>
@@ -998,6 +998,17 @@ function renderMyWork() {
             </div>
         `;
     });
+}
+
+function focusMyWorkJob(jobId) {
+    const el = document.getElementById(`mywork-${jobId}`);
+    if(!el) return false;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    el.classList.remove('flash');
+    // force reflow
+    void el.offsetWidth;
+    el.classList.add('flash');
+    return true;
 }
 
 function renderWorkerOrderDetail(job) {
@@ -1845,10 +1856,11 @@ function openNotificationTarget(id) {
     markNotificationRead(id);
     closeModal('notificationsModal');
     navigateToPage('myWorkPage');
-    // Ensure we can open details even if job is archived
     if(n.jobId) {
         setTimeout(() => {
-            openCalendarJobDetail(n.jobId);
+            // Render first, then jump to the Accept/Reject card (Worker) or the relevant task card.
+            renderMyWork();
+            setTimeout(() => focusMyWorkJob(n.jobId), 50);
         }, 120);
     }
 }
