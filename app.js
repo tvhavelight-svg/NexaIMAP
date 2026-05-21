@@ -877,13 +877,6 @@ function renderDashboard() {
                     Load: ${m.mins} mins
                 </div>
                 ${procHtml}
-                ${currentUser.role === 'Officer' ? `
-                    <div class="admin-card-controls" onclick="event.stopPropagation()">
-                        <button class="btn btn-outline" onclick="forceStatus('${m.name}', 'Offline')">ออฟไลน์</button>
-                        <button class="btn btn-outline" onclick="forceStatus('${m.name}', null)">ออนไลน์</button>
-                        <button class="btn btn-outline" onclick="clearMemberJobs('${m.name}')">Clear Jobs</button>
-                    </div>
-                ` : ''}
             </div>
         `;
         if(m.role === 'Employee') empGrid.innerHTML += cardHtml;
