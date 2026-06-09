@@ -1010,11 +1010,14 @@ function renderMyWork() {
             if(job.status === 'qc_check') {
                 bodyBlock = renderOfficerQCBlock(job, true);
                 actionButtons = `
-                    <button class="btn btn-primary" id="officerCommitBtn-${job.id}" onclick="officerCommitQC('${job.id}')" disabled>Commit</button>
+                    <button class="btn btn-primary" id="officerCommitBtn-${job.id}" onclick="officerCommitQC('${job.id}')" disabled>ส่งต่อไป Pre-Shipment Inspection</button>
                     <button class="btn btn-outline" onclick="openStageReject('officer','${job.id}')" style="color:var(--red-text);">Reject</button>
                 `;
                 // After render, update button enabled state
                 setTimeout(() => updateOfficerCommitEnabled(job.id), 0);
+            } else if(job.status === 'working' && job.reworkStage === 'officer') {
+                bodyBlock = `${renderWorkerOrderDetail(job)}<div class="text-muted" style="margin-top:0.75rem;">งานนี้ถูกตีกลับไป ${getDisplayRoleLabel('worker')} แล้ว</div>`;
+                actionButtons = `<span style="color:var(--text-muted);">รอ ${getDisplayRoleLabel('worker')} แก้ไขและส่งใหม่</span>`;
             }
         } else if(isMySpecial) {
             if(job.status === 'special_check') {
@@ -1338,7 +1341,14 @@ function ensureChecklist(job, kind) {
     const key = (kind === 'officer') ? 'officerQcChecklist' : 'specialOfficerChecklist';
     const defaults = (kind === 'officer') ? OFFICER_QC_CHECK_KEYS : SPECIAL_OFFICER_CHECK_KEYS;
     if(!job[key] || typeof job[key] !== 'object') job[key] = {};
-    defaults.forEach(k => { if(job[key][k] !== true) job[key][k] = false; });
+    defaults.forEach(k => {
+        if(kind === 'officer') {
+            if(job[key][k] === true) job[key][k] = 'pass';
+            else if(job[key][k] === false || job[key][k] == null || !['pass', 'fail'].includes(job[key][k])) job[key][k] = 'pending';
+        } else {
+            if(job[key][k] !== true) job[key][k] = false;
+        }
+    });
     return job[key];
 }
 
@@ -1346,9 +1356,24 @@ function renderChecklist(job, kind, enabled) {
     const list = ensureChecklist(job, kind);
     const keys = (kind === 'officer') ? OFFICER_QC_CHECK_KEYS : SPECIAL_OFFICER_CHECK_KEYS;
     const title = (kind === 'officer')
-        ? `${getDisplayRoleLabel('officerQc')}: ตรวจสอบก่อน Commit`
+        ? `${getDisplayRoleLabel('officerQc')}: ตรวจสอบก่อนส่งต่อ`
         : `${getDisplayRoleLabel('specialOfficer')}: ตรวจสอบก่อน Approve`;
     const rowFn = (k) => {
+        if(kind === 'officer') {
+            const passChecked = list[k] === 'pass' ? 'checked' : '';
+            const failChecked = list[k] === 'fail' ? 'checked' : '';
+            const dis = enabled ? '' : 'disabled';
+            return `
+                <div class="qc-eval-row">
+                    <div class="qc-eval-label">${escapeHtml(k)}</div>
+                    <div class="qc-eval-options">
+                        <label class="qc-eval-option pass"><input type="radio" name="qc-${job.id}-${escapeHtml(k)}" value="pass" ${passChecked} ${dis} onchange="officerChecklistToggle('${job.id}', '${escapeHtml(k)}', 'pass')"> ผ่าน</label>
+                        <label class="qc-eval-option fail"><input type="radio" name="qc-${job.id}-${escapeHtml(k)}" value="fail" ${failChecked} ${dis} onchange="officerChecklistToggle('${job.id}', '${escapeHtml(k)}', 'fail')"> ไม่ผ่าน</label>
+                    </div>
+                </div>
+            `;
+        }
+
         const checked = list[k] === true ? 'checked' : '';
         const dis = enabled ? '' : 'disabled';
         const onChange = enabled
@@ -1360,10 +1385,10 @@ function renderChecklist(job, kind, enabled) {
     return `
       <div class="work-block">
         <div class="work-block-title">${escapeHtml(title)}</div>
-        <div class="check-grid">
+        <div class="${kind === 'officer' ? 'qc-eval-grid' : 'check-grid'}">
           ${keys.map(rowFn).join('')}
         </div>
-        <div class="text-muted" style="margin-top:0.5rem;">ต้องติ๊กให้ครบทุกข้อเท่านั้นถึงจะกด Commit/Approve ได้</div>
+        <div class="text-muted" style="margin-top:0.5rem;">ถ้าเลือก <strong>ผ่าน</strong> ครบ 5 ข้อ จะส่งต่อไป ${getDisplayRoleLabel('specialOfficer')} ได้ทันที ถ้าเลือก <strong>ไม่ผ่าน</strong> ข้อใดข้อหนึ่ง ระบบจะตีกลับไป ${getDisplayRoleLabel('worker')} ทันที</div>
       </div>
     `;
 }
@@ -1380,9 +1405,13 @@ function officerChecklistToggle(jobId, key, checked) {
     const job = findJobById(jobId);
     if(!job) return;
     const list = ensureChecklist(job, 'officer');
-    list[key] = !!checked;
+    list[key] = checked === 'pass' ? 'pass' : 'fail';
     job.officerQcChecklist = list;
     saveAppState();
+    if(checked === 'fail') {
+        officerSendBackToProcessing(jobId, key);
+        return;
+    }
     updateOfficerCommitEnabled(jobId);
 }
 
@@ -1400,12 +1429,20 @@ function isAllChecked(obj, keys) {
     return keys.every(k => obj && obj[k] === true);
 }
 
+function isAllPassed(obj, keys) {
+    return keys.every(k => obj && obj[k] === 'pass');
+}
+
+function hasAnyFail(obj, keys) {
+    return keys.some(k => obj && obj[k] === 'fail');
+}
+
 function updateOfficerCommitEnabled(jobId) {
     const job = findJobById(jobId);
     const btn = document.getElementById(`officerCommitBtn-${jobId}`);
     if(!job || !btn) return;
     const list = ensureChecklist(job, 'officer');
-    btn.disabled = !isAllChecked(list, OFFICER_QC_CHECK_KEYS);
+    btn.disabled = !isAllPassed(list, OFFICER_QC_CHECK_KEYS);
 }
 
 function updateSpecialApproveEnabled(jobId) {
@@ -1416,12 +1453,40 @@ function updateSpecialApproveEnabled(jobId) {
     btn.disabled = !isAllChecked(list, SPECIAL_OFFICER_CHECK_KEYS);
 }
 
+function officerSendBackToProcessing(jobId, failedKey) {
+    const job = findJobById(jobId);
+    if(!job) return;
+
+    job.status = 'working';
+    job.returnedByQCAt = new Date().toISOString();
+    job.reworkRequired = true;
+    job.reworkStage = 'officer';
+    job.qcFeedback = Array.isArray(job.qcFeedback) ? job.qcFeedback : [];
+    job.qcFeedback.push({
+        date: new Date().toISOString(),
+        message: `QC ไม่ผ่าน: ${failedKey}`
+    });
+
+    if(job.officerQcChecklist && typeof job.officerQcChecklist === 'object') {
+        job.officerQcChecklist = {};
+    }
+
+    saveAppState();
+    notifyUserOfJob(job.worker, job.id, 'งานถูกตีกลับจาก QC', `${job.name} มีรายการที่ไม่ผ่าน (${failedKey}) กรุณาแก้ไขแล้วส่งใหม่`);
+    renderMyWork();
+    renderDashboard();
+}
+
 function officerCommitQC(jobId) {
     const job = findJobById(jobId);
     if(!job) return;
     const list = ensureChecklist(job, 'officer');
-    if(!isAllChecked(list, OFFICER_QC_CHECK_KEYS)) {
-        alert(`กรุณาติ๊ก ${getDisplayRoleLabel('officerQc')} ให้ครบทุกข้อก่อน Commit`);
+    if(hasAnyFail(list, OFFICER_QC_CHECK_KEYS)) {
+        alert(`มีข้อที่ถูกเลือกเป็น ไม่ผ่าน ระบบได้ตีกลับไป ${getDisplayRoleLabel('worker')} แล้ว`);
+        return;
+    }
+    if(!isAllPassed(list, OFFICER_QC_CHECK_KEYS)) {
+        alert(`กรุณาเลือก ${getDisplayRoleLabel('officerQc')} เป็น ผ่าน ให้ครบทั้ง 5 ข้อก่อนส่งต่อ`);
         return;
     }
     job.officerCommittedAt = new Date().toISOString();
@@ -2443,15 +2508,7 @@ function qcPass(jobId) {
 }
 
 function qcFail(jobId) {
-    const job = findJobById(jobId);
-    if(job) {
-        job.status = 'working';
-        job.returnedByQCAt = new Date().toISOString();
-        job.qcFeedback = job.qcFeedback || [];
-        job.qcFeedback.push({ date: new Date().toISOString(), message: 'QC ไม่ผ่าน กรุณาแก้ไข' });
-        saveAppState();
-        renderMyWork();
-    }
+    officerSendBackToProcessing(jobId, 'QC ไม่ผ่าน');
 }
 
 function specialApprove(jobId) {
