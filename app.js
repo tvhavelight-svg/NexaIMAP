@@ -956,6 +956,7 @@ function renderMyWork() {
     myJobs.forEach((job, index) => {
         let notesHtml = (job.notes || []).map(n => `<div class="work-note">โน้ต: ${n}</div>`).join('');
         let qcFeedbackHtml = (job.qcFeedback || []).map(f => `<div class="work-note" style="border-left-color:var(--red-text);">QC ไม่ผ่าน: ${f.message} (${new Date(f.date).toLocaleString()})</div>`).join('');
+        const workerReceiptHtml = renderWorkerOrderDetail(job);
 
         // Officers can be assigned as Worker too. Determine "my role for this job" by assignment, not by account role.
         const isMyWorker = job.worker === currentUser.name;
@@ -982,21 +983,21 @@ function renderMyWork() {
             if(job.status === 'ordered') {
                 const accepted = job.workerAccepted === true;
                 if(!accepted) {
-                    bodyBlock = renderWorkerOrderDetail(job);
+                    bodyBlock = workerReceiptHtml;
                     actionButtons = `
                         <button class="btn btn-outline" onclick="openWorkerReject('${job.id}')">Reject</button>
                         <button class="btn btn-primary" onclick="workerAcceptJob('${job.id}')">Accept</button>
                     `;
                 } else {
                     actionButtons = `<button class="btn btn-primary" onclick="startWorking('${job.id}')">▶ เริ่มทำงาน</button>`;
-                    bodyBlock = `<div class="text-muted">รับงานแล้ว กด “เริ่มทำงาน” เพื่อเริ่มกรอกข้อมูลสำหรับส่งตรวจ</div>`;
+                    bodyBlock = `${workerReceiptHtml}<div class="text-muted" style="margin-top:0.75rem;">รับงานแล้ว กด “เริ่มทำงาน” เพื่อเริ่มกรอกข้อมูลสำหรับส่งตรวจ</div>`;
                 }
             } else if(job.status === 'working') {
                 actionButtons = `
                     <button class="btn btn-outline" onclick="markWorkUpdated('${job.id}')">Update Work</button>
                     <button class="btn btn-primary" onclick="workerCommitToQC('${job.id}')">${job.reworkRequired ? 'ส่งตรวจใหม่ (QC)' : 'Commit ส่งตรวจ (QC)'}</button>
                 `;
-                bodyBlock = renderWorkerCommitBlock(job);
+                bodyBlock = `${workerReceiptHtml}${renderWorkerCommitBlock(job)}`;
             } else if(job.status === 'special_check') {
                 actionButtons = `<span style="color:var(--green-text);">✓ งานอนุมัติแล้ว รอแจ้งผู้สั่งงาน</span>`;
             } else if(job.status === 'completed') {
@@ -1058,16 +1059,42 @@ function focusMyWorkJob(jobId) {
 }
 
 function renderWorkerOrderDetail(job) {
+    const detailRows = [
+        ['Satellite', job.satellite],
+        ['Scene Count', job.sceneCount ?? job.imgCount],
+        ['Data Product Level', job.dataProductLevel],
+        ['Reference', job.reference],
+        ['Coordinate System', job.coordinateSystem],
+        ['Datum', job.datum],
+        ['Datum Zone', job.datumZone],
+        ['File Format', job.fileFormat],
+        ['File Type', job.fileType],
+        ['Path Rawdata', job.pathRawdata],
+        ['Processes', (job.steps || []).join(', ') || '-'],
+        ['Approver', job.approver],
+        ['Rawdata Ready', job.rawdataReady],
+        ['Requested By', job.requestedBy]
+    ].map(([label, value]) => `
+        <div class="receipt-kv">
+            <div class="k">${escapeHtml(label)}</div>
+            <div class="v">${escapeHtml(value ?? '-')}</div>
+        </div>
+    `).join('');
+
     return `
       <div class="work-block">
-        <div class="work-block-title">รายละเอียดงาน</div>
-        <div class="calendar-detail-grid" style="margin-top:0.5rem;">
-          <div><strong>Satellite</strong><span>${escapeHtml(job.satellite || '-')}</span></div>
-          <div><strong>Scene Count</strong><span>${escapeHtml(job.sceneCount ?? job.imgCount ?? '-')}</span></div>
-          <div><strong>Processes</strong><span>${escapeHtml((job.steps || []).join(', ') || '-')}</span></div>
-          <div><strong>Approver</strong><span>${escapeHtml(job.approver || '-')}</span></div>
-          <div><strong>Rawdata Ready</strong><span>${escapeHtml(job.rawdataReady || '-')}</span></div>
-          <div><strong>Requested By</strong><span>${escapeHtml(job.requestedBy || '-')}</span></div>
+        <div class="work-block-title">รายละเอียดจากใบเสร็จ</div>
+        <div class="receipt-like-card" style="margin-top:0.75rem;">
+          <div class="receipt-like-head">
+            <div>
+              <div class="receipt-like-title">${escapeHtml(job.name)}</div>
+              <div class="receipt-like-sub">ข้อมูลคำสั่งซื้อที่ sale ส่งมา</div>
+            </div>
+            <div class="status-badge ${getStatusColor(job.status)}">${getStatusLabel(job.status)}</div>
+          </div>
+          <div class="receipt-like-grid">
+            ${detailRows}
+          </div>
         </div>
         <div class="text-muted" style="margin-top:0.6rem;">กด Accept เพื่อรับงาน หรือ Reject เพื่อส่งกลับไปให้คนสั่งงาน</div>
       </div>
