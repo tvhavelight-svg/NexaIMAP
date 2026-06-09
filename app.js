@@ -1383,12 +1383,12 @@ function renderChecklist(job, kind, enabled) {
     };
 
     return `
-      <div class="work-block">
+      <div class="work-block qc-review-card">
         <div class="work-block-title">${escapeHtml(title)}</div>
         <div class="${kind === 'officer' ? 'qc-eval-grid' : 'check-grid'}">
           ${keys.map(rowFn).join('')}
         </div>
-        <div class="text-muted" style="margin-top:0.5rem;">ถ้าเลือก <strong>ผ่าน</strong> ครบ 5 ข้อ จะส่งต่อไป ${getDisplayRoleLabel('specialOfficer')} ได้ทันที ถ้าเลือก <strong>ไม่ผ่าน</strong> ข้อใดข้อหนึ่ง ระบบจะตีกลับไป ${getDisplayRoleLabel('worker')} ทันที</div>
+        <div class="text-muted" style="margin-top:0.5rem;">เลือก <strong>ผ่าน / ไม่ผ่าน</strong> ให้ครบทั้ง 5 ข้อก่อนกด Commit ถ้ามีข้อใดไม่ผ่าน ระบบจะตีกลับไป ${getDisplayRoleLabel('worker')} ตอนกด Commit</div>
       </div>
     `;
 }
@@ -1408,10 +1408,6 @@ function officerChecklistToggle(jobId, key, checked) {
     list[key] = checked === 'pass' ? 'pass' : 'fail';
     job.officerQcChecklist = list;
     saveAppState();
-    if(checked === 'fail') {
-        officerSendBackToProcessing(jobId, key);
-        return;
-    }
     updateOfficerCommitEnabled(jobId);
 }
 
@@ -1437,12 +1433,16 @@ function hasAnyFail(obj, keys) {
     return keys.some(k => obj && obj[k] === 'fail');
 }
 
+function isAllEvaluated(obj, keys) {
+    return keys.every(k => obj && ['pass', 'fail'].includes(obj[k]));
+}
+
 function updateOfficerCommitEnabled(jobId) {
     const job = findJobById(jobId);
     const btn = document.getElementById(`officerCommitBtn-${jobId}`);
     if(!job || !btn) return;
     const list = ensureChecklist(job, 'officer');
-    btn.disabled = !isAllPassed(list, OFFICER_QC_CHECK_KEYS);
+    btn.disabled = !isAllEvaluated(list, OFFICER_QC_CHECK_KEYS);
 }
 
 function updateSpecialApproveEnabled(jobId) {
@@ -1481,14 +1481,17 @@ function officerCommitQC(jobId) {
     const job = findJobById(jobId);
     if(!job) return;
     const list = ensureChecklist(job, 'officer');
-    if(hasAnyFail(list, OFFICER_QC_CHECK_KEYS)) {
-        alert(`มีข้อที่ถูกเลือกเป็น ไม่ผ่าน ระบบได้ตีกลับไป ${getDisplayRoleLabel('worker')} แล้ว`);
+    if(!isAllEvaluated(list, OFFICER_QC_CHECK_KEYS)) {
+        alert(`กรุณาเลือก ผ่าน / ไม่ผ่าน ให้ครบทั้ง 5 ข้อก่อนกด Commit`);
         return;
     }
-    if(!isAllPassed(list, OFFICER_QC_CHECK_KEYS)) {
-        alert(`กรุณาเลือก ${getDisplayRoleLabel('officerQc')} เป็น ผ่าน ให้ครบทั้ง 5 ข้อก่อนส่งต่อ`);
+
+    const failedKey = OFFICER_QC_CHECK_KEYS.find(k => list[k] === 'fail');
+    if(failedKey) {
+        officerSendBackToProcessing(jobId, failedKey);
         return;
     }
+
     job.officerCommittedAt = new Date().toISOString();
     saveAppState();
     qcPass(jobId);
