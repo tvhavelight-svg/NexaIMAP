@@ -13,6 +13,25 @@ const firebaseConfig = {
 let db;
 let notifications = [];
 
+const DISPLAY_ROLE_LABELS = {
+    worker: 'Processing',
+    officerQc: 'QC',
+    specialOfficer: 'Pre-Shipment Inspection'
+};
+
+function getDisplayRoleLabel(kind) {
+    return DISPLAY_ROLE_LABELS[kind] || kind;
+}
+
+function getMemberRoleDisplay(role) {
+    if(role === 'Officer') return getDisplayRoleLabel('officerQc');
+    if(role === 'Special Officer') return getDisplayRoleLabel('specialOfficer');
+    if(role === 'Employee') return 'Employee';
+    if(role === 'User') return 'User';
+    if(role === 'Admin') return 'Admin';
+    return role;
+}
+
 function initFirebase() {
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
@@ -371,7 +390,7 @@ const appScreen = document.getElementById('app');
 
 function showAppForCurrentUser() {
     if(!currentUser) return;
-    document.getElementById('currentUserDisplay').textContent = `👤 ${currentUser.name.toUpperCase()} (${currentUser.role})`;
+    document.getElementById('currentUserDisplay').textContent = `👤 ${currentUser.name.toUpperCase()} (${getMemberRoleDisplay(currentUser.role)})`;
     loginScreen.classList.remove('active');
     appScreen.style.display = 'block';
     
@@ -587,9 +606,9 @@ function addWorkingDays(date, days) {
 }
 
 function getJobAssignmentRole(job, name) {
-    if(job.worker === name) return 'Worker';
-    if(job.qcOfficer === name || job.qc === name) return 'Officer QC';
-    if(job.specialOfficer === name || job.specialQc === name) return 'Special Officer';
+    if(job.worker === name) return getDisplayRoleLabel('worker');
+    if(job.qcOfficer === name || job.qc === name) return getDisplayRoleLabel('officerQc');
+    if(job.specialOfficer === name || job.specialQc === name) return getDisplayRoleLabel('specialOfficer');
     return null;
 }
 
@@ -843,7 +862,7 @@ function renderDashboard() {
             jobsList.innerHTML += `
                 <div class="work-item" style="padding: 1rem; margin-bottom: 0.5rem; border-left-color: var(--accent2);">
                     <strong>${job.name}</strong><br>
-                    <small>Worker: ${job.worker || '-'} | Officer: ${job.qcOfficer || job.qc || '-'} | Special: ${job.specialOfficer || job.specialQc || '-'} | Queue: ${job.queuePosition || '-'}</small>
+                    <small>${getDisplayRoleLabel('worker')}: ${job.worker || '-'} | ${getDisplayRoleLabel('officerQc')}: ${job.qcOfficer || job.qc || '-'} | ${getDisplayRoleLabel('specialOfficer')}: ${job.specialOfficer || job.specialQc || '-'} | Queue: ${job.queuePosition || '-'}</small>
                     <div style="margin-top:0.5rem; display:flex; gap:0.5rem;">
                         <button class="btn btn-primary" onclick="finishJob(${index})" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">จบงาน</button>
                         <button class="btn btn-outline" onclick="deleteJob(${index})" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; color: var(--red-text);">ลบ</button>
@@ -872,7 +891,7 @@ function renderDashboard() {
                     <span class="member-name">${m.name}</span>
                     <span class="status-badge ${m.status.toLowerCase()}">${m.status}</span>
                 </div>
-                <div class="member-role">${m.role}</div>
+                <div class="member-role">${getMemberRoleDisplay(m.role)}</div>
                 <div style="margin-top:0.5rem; font-size:0.85rem; color:var(--text-muted);">
                     Load: ${m.mins} mins
                 </div>
@@ -913,7 +932,11 @@ function renderMyWork() {
         const isMyOfficerQC = (job.qcOfficer === currentUser.name || job.qc === currentUser.name);
         const isMySpecial = (job.specialOfficer === currentUser.name || job.specialQc === currentUser.name);
 
-        const roleLabel = isMyWorker ? 'Worker' : (isMyOfficerQC ? 'Officer QC' : (isMySpecial ? 'Special Officer' : currentUser.role));
+        const roleLabel = isMyWorker
+            ? getDisplayRoleLabel('worker')
+            : (isMyOfficerQC
+                ? getDisplayRoleLabel('officerQc')
+                : (isMySpecial ? getDisplayRoleLabel('specialOfficer') : currentUser.role));
         const mins = isMyWorker
             ? (job.workerMins || job.estimatedMinutes || 0)
             : isMyOfficerQC
@@ -1083,7 +1106,9 @@ function openStageReject(kind, jobId) {
     const reasonEl = document.getElementById('srReason');
     const confirmBtn = document.getElementById('srConfirmBtn');
 
-    const roleLabel = kind === 'officer' ? 'Officer QC' : 'Special Officer';
+    const roleLabel = kind === 'officer'
+        ? getDisplayRoleLabel('officerQc')
+        : getDisplayRoleLabel('specialOfficer');
     if(titleEl) titleEl.textContent = `${roleLabel}: Reject`;
     if(infoEl) infoEl.textContent = `${job.name} • ${job.satellite || '-'} • ${job.imgCount} scenes`;
     if(reasonEl) reasonEl.value = '';
@@ -1190,12 +1215,12 @@ function renderWorkerCommitBlock(job) {
     const extraRows = extra.map((p) => `<div class="path-row"><input type="text" value="${escapeHtml(p)}" placeholder="New Path"></div>`).join('');
 
     const reworkBanner = job.reworkRequired
-        ? `<div class="work-note" style="border-left-color:var(--red-text);">งานถูก Reject จาก ${escapeHtml(job.reworkStage === 'special' ? 'Special Officer' : 'Officer QC')} กรุณาแก้ไขข้อมูลและส่งตรวจใหม่</div>`
+        ? `<div class="work-note" style="border-left-color:var(--red-text);">งานถูก Reject จาก ${escapeHtml(job.reworkStage === 'special' ? getDisplayRoleLabel('specialOfficer') : getDisplayRoleLabel('officerQc'))} กรุณาแก้ไขข้อมูลและส่งตรวจใหม่</div>`
         : '';
 
     return `
       <div class="work-block">
-        <div class="work-block-title">Worker: กรอกข้อมูลส่งตรวจ</div>
+        <div class="work-block-title">${getDisplayRoleLabel('worker')}: กรอกข้อมูลส่งตรวจ</div>
         ${reworkBanner}
         <div class="path-inputs" id="paths-${job.id}">
             <div class="path-row"><input type="text" value="${escapeHtml(v(0))}" placeholder="REFERENCE Path"></div>
@@ -1263,7 +1288,9 @@ function ensureChecklist(job, kind) {
 function renderChecklist(job, kind, enabled) {
     const list = ensureChecklist(job, kind);
     const keys = (kind === 'officer') ? OFFICER_QC_CHECK_KEYS : SPECIAL_OFFICER_CHECK_KEYS;
-    const title = (kind === 'officer') ? 'Officer QC: ตรวจสอบก่อน Commit' : 'Special Officer: ตรวจสอบก่อน Approve';
+    const title = (kind === 'officer')
+        ? `${getDisplayRoleLabel('officerQc')}: ตรวจสอบก่อน Commit`
+        : `${getDisplayRoleLabel('specialOfficer')}: ตรวจสอบก่อน Approve`;
     const rowFn = (k) => {
         const checked = list[k] === true ? 'checked' : '';
         const dis = enabled ? '' : 'disabled';
@@ -1337,7 +1364,7 @@ function officerCommitQC(jobId) {
     if(!job) return;
     const list = ensureChecklist(job, 'officer');
     if(!isAllChecked(list, OFFICER_QC_CHECK_KEYS)) {
-        alert('กรุณาติ๊ก Officer QC ให้ครบทุกข้อก่อน Commit');
+        alert(`กรุณาติ๊ก ${getDisplayRoleLabel('officerQc')} ให้ครบทุกข้อก่อน Commit`);
         return;
     }
     job.officerCommittedAt = new Date().toISOString();
@@ -1350,7 +1377,7 @@ function specialOfficerApprove(jobId) {
     if(!job) return;
     const list = ensureChecklist(job, 'special');
     if(!isAllChecked(list, SPECIAL_OFFICER_CHECK_KEYS)) {
-        alert('กรุณาติ๊ก Special Officer ให้ครบทุกข้อก่อน Approve');
+        alert(`กรุณาติ๊ก ${getDisplayRoleLabel('specialOfficer')} ให้ครบทุกข้อก่อน Approve`);
         return;
     }
     job.specialCommittedAt = new Date().toISOString();
@@ -1467,31 +1494,31 @@ function getMemberActiveProcess(memberName) {
     const asWorker = jobs.find(j => (j.worker === memberName) && (j.status === 'ordered' || j.status === 'working'));
     if(asWorker) {
         const label = asWorker.status === 'ordered'
-            ? 'รอเริ่มงาน: กำลังปรับแก้ภาพถ่ายดาวเทียม'
-            : 'กำลังปรับแก้ภาพถ่ายดาวเทียม';
+            ? `รอเริ่มงาน: ${getDisplayRoleLabel('worker')}`
+            : getDisplayRoleLabel('worker');
         return { label, jobName: asWorker.name, role: 'Employee' };
     }
 
     // Officer QC work
     const asOfficer = jobs.find(j => (j.qcOfficer === memberName || j.qc === memberName) && j.status === 'qc_check');
     if(asOfficer) {
-        return { label: 'อยู่ระหว่างตรวจสอบคุณภาพผลิตภัณฑ์ (QC)', jobName: asOfficer.name, role: 'Officer' };
+        return { label: `อยู่ระหว่างตรวจสอบคุณภาพผลิตภัณฑ์ (${getDisplayRoleLabel('officerQc')})`, jobName: asOfficer.name, role: 'Officer' };
     }
 
     const officerQueued = jobs.find(j => (j.qcOfficer === memberName || j.qc === memberName) && (j.status === 'ordered' || j.status === 'working'));
     if(officerQueued) {
-        return { label: 'รอคิวตรวจสอบคุณภาพผลิตภัณฑ์ (QC)', jobName: officerQueued.name, role: 'Officer' };
+        return { label: `รอคิวตรวจสอบคุณภาพผลิตภัณฑ์ (${getDisplayRoleLabel('officerQc')})`, jobName: officerQueued.name, role: 'Officer' };
     }
 
     // Special Officer approve before send
     const asSpecial = jobs.find(j => (j.specialOfficer === memberName || j.specialQc === memberName) && j.status === 'special_check');
     if(asSpecial) {
-        return { label: 'อยู่ระหว่างตรวจสอบคุณภาพผลิตภัณฑ์ (Approve ก่อนส่ง)', jobName: asSpecial.name, role: 'Special Officer' };
+        return { label: `อยู่ระหว่างตรวจสอบคุณภาพผลิตภัณฑ์ (${getDisplayRoleLabel('specialOfficer')})`, jobName: asSpecial.name, role: 'Special Officer' };
     }
 
     const specialQueued = jobs.find(j => (j.specialOfficer === memberName || j.specialQc === memberName) && (j.status === 'ordered' || j.status === 'working' || j.status === 'qc_check'));
     if(specialQueued) {
-        return { label: 'รอคิวตรวจสอบคุณภาพผลิตภัณฑ์ (Approve ก่อนส่ง)', jobName: specialQueued.name, role: 'Special Officer' };
+        return { label: `รอคิวตรวจสอบคุณภาพผลิตภัณฑ์ (${getDisplayRoleLabel('specialOfficer')})`, jobName: specialQueued.name, role: 'Special Officer' };
     }
 
     return null;
@@ -1516,13 +1543,13 @@ function renderStatus() {
         let processLabel = 'รอเริ่มงาน';
         let processOwner = job.worker || '-';
         if(job.status === 'ordered' || job.status === 'working') {
-            processLabel = 'กำลังปรับแก้ภาพถ่ายดาวเทียม (Employee)';
+            processLabel = `กำลัง${getDisplayRoleLabel('worker')}`;
             processOwner = job.worker || '-';
         } else if(job.status === 'qc_check') {
-            processLabel = 'อยู่ระหว่างตรวจสอบคุณภาพผลิตภัณฑ์ (Officer QC)';
+            processLabel = `อยู่ระหว่างตรวจสอบคุณภาพผลิตภัณฑ์ (${getDisplayRoleLabel('officerQc')})`;
             processOwner = job.qcOfficer || job.qc || '-';
         } else if(job.status === 'special_check') {
-            processLabel = 'อยู่ระหว่างตรวจสอบคุณภาพผลิตภัณฑ์ (Special Officer Approve ก่อนส่ง)';
+            processLabel = `อยู่ระหว่างตรวจสอบคุณภาพผลิตภัณฑ์ (${getDisplayRoleLabel('specialOfficer')})`;
             processOwner = job.specialOfficer || job.specialQc || '-';
         } else if(job.status === 'completed') {
             processLabel = 'เสร็จสิ้น';
@@ -1809,9 +1836,9 @@ function showOrderConfirm(draft) {
         <p><strong>Satellite:</strong> ${draft.satellite}</p>
         <p><strong>Scene Count:</strong> ${draft.sceneCount}</p>
         <div style="margin: 1rem 0; padding: 1rem; background: var(--bg2); border-radius: 8px;">
-            <p><strong>Worker Assigned:</strong> <span class="status-badge available">${draft.worker}</span></p>
-            <p><strong>Officer QC:</strong> <span class="status-badge available">${draft.qcOfficer || '-'}</span></p>
-            <p><strong>Special Officer:</strong> <span class="status-badge available">${draft.specialOfficer || '-'}</span></p>
+            <p><strong>${getDisplayRoleLabel('worker')}:</strong> <span class="status-badge available">${draft.worker}</span></p>
+            <p><strong>${getDisplayRoleLabel('officerQc')}:</strong> <span class="status-badge available">${draft.qcOfficer || '-'}</span></p>
+            <p><strong>${getDisplayRoleLabel('specialOfficer')}:</strong> <span class="status-badge available">${draft.specialOfficer || '-'}</span></p>
             <p><strong>Queue Position:</strong> ${draft.queuePosition}</p>
             <p><strong>วาง Rawdata แล้ว:</strong> <span class="status-badge ${draft.rawdataReady === 'Yes' ? 'available' : 'busy'}">${draft.rawdataReady}</span></p>
             <p><strong>ผู้อนุมัติ:</strong> <span class="status-badge available">${draft.approver || '-'}</span></p>
@@ -1981,9 +2008,9 @@ function buildOrderReceiptText(job) {
     lines.push(`Approver: ${job.approver || '-'}`);
     lines.push(`Steps: ${(job.steps || []).join(', ')}`);
     lines.push('');
-    lines.push(`Employee: ${job.worker || '-'} | ${formatDateOnly(job.workerStart)} - ${formatDateOnly(job.workerDeadline)} | ${formatMins(job.workerMins)} mins`);
-    lines.push(`Officer(QC): ${job.qcOfficer || job.qc || '-'} | ${formatDateOnly(job.qcImageStart)} - ${formatDateOnly(job.qcImageEnd)} | ${formatMins(job.qcImageMins)} mins`);
-    lines.push(`Special Officer(QC:SENT): ${job.specialOfficer || job.specialQc || '-'} | ${formatDateOnly(job.qcSentStart)} - ${formatDateOnly(job.qcSentEnd)} | ${formatMins(job.qcSentMins)} mins`);
+    lines.push(`${getDisplayRoleLabel('worker')}: ${job.worker || '-'} | ${formatDateOnly(job.workerStart)} - ${formatDateOnly(job.workerDeadline)} | ${formatMins(job.workerMins)} mins`);
+    lines.push(`${getDisplayRoleLabel('officerQc')}: ${job.qcOfficer || job.qc || '-'} | ${formatDateOnly(job.qcImageStart)} - ${formatDateOnly(job.qcImageEnd)} | ${formatMins(job.qcImageMins)} mins`);
+    lines.push(`${getDisplayRoleLabel('specialOfficer')}: ${job.specialOfficer || job.specialQc || '-'} | ${formatDateOnly(job.qcSentStart)} - ${formatDateOnly(job.qcSentEnd)} | ${formatMins(job.qcSentMins)} mins`);
     lines.push('');
     lines.push(`Final deadline: ${new Date(job.finalDeadline || job.deadline).toLocaleString('th-TH')}`);
     return lines.join('\n');
@@ -2035,21 +2062,21 @@ function showOrderSummary(job) {
     const finalDl = new Date(job.finalDeadline || job.deadline).toLocaleString('th-TH');
 
     const employeeRow = {
-        label: 'Employee',
+        label: getDisplayRoleLabel('worker'),
         name: job.worker || '-',
         start: job.workerStart,
         end: job.workerDeadline,
         mins: job.workerMins
     };
     const officerRow = {
-        label: 'Officer (QC)',
+        label: getDisplayRoleLabel('officerQc'),
         name: job.qcOfficer || job.qc || '-',
         start: job.qcImageStart,
         end: job.qcImageEnd,
         mins: job.qcImageMins
     };
     const specialRow = {
-        label: 'Special Officer (QC:SENT)',
+        label: getDisplayRoleLabel('specialOfficer'),
         name: job.specialOfficer || job.specialQc || '-',
         start: job.qcSentStart,
         end: job.qcSentEnd,
@@ -2197,7 +2224,7 @@ function renderSummary() {
         tbody.innerHTML += `
             <tr>
                 <td>${m.name}</td>
-                <td>${m.role}</td>
+                <td>${getMemberRoleDisplay(m.role)}</td>
                 <td>${uniqueJobs.length}</td>
                 <td>${totalImgs}</td>
                 <td>${totalMins}</td>
@@ -2412,20 +2439,20 @@ function openCalendarJobDetail(jobId) {
     document.getElementById('cdBody').innerHTML = `
         <div class="calendar-detail-grid">
             <div><strong>Satellite</strong><span>${job.satellite || '-'}</span></div>
-            <div><strong>Worker</strong><span>${job.worker || '-'}</span></div>
-            <div><strong>Officer QC</strong><span>${job.qcOfficer || job.qc || '-'}</span></div>
-            <div><strong>Special Officer</strong><span>${job.specialOfficer || job.specialQc || '-'}</span></div>
+            <div><strong>${getDisplayRoleLabel('worker')}</strong><span>${job.worker || '-'}</span></div>
+            <div><strong>${getDisplayRoleLabel('officerQc')}</strong><span>${job.qcOfficer || job.qc || '-'}</span></div>
+            <div><strong>${getDisplayRoleLabel('specialOfficer')}</strong><span>${job.specialOfficer || job.specialQc || '-'}</span></div>
             <div><strong>Status</strong><span>${status}</span></div>
             <div><strong>Start</strong><span>${formatDateTimeLabel(start)}</span></div>
-            <div><strong>Worker End</strong><span>${formatDateTimeLabel(workerEnd)}</span></div>
+            <div><strong>${getDisplayRoleLabel('worker')} End</strong><span>${formatDateTimeLabel(workerEnd)}</span></div>
             <div><strong>QC Start</strong><span>${formatDateTimeLabel(qcStart)}</span></div>
             <div><strong>QC End</strong><span>${formatDateTimeLabel(qcEnd)}</span></div>
             <div><strong>QC:SENT Start</strong><span>${formatDateTimeLabel(sentStart)}</span></div>
             <div><strong>QC:SENT End</strong><span>${formatDateTimeLabel(sentEnd)}</span></div>
             <div><strong>Scene Count</strong><span>${job.sceneCount ?? job.imgCount ?? '-'}</span></div>
             <div><strong>Estimated Minutes</strong><span>${formatMins(job.estimatedMinutes ?? job.workerMins ?? 0)}</span></div>
-            <div><strong>Officer QC Mins</strong><span>${formatMins(job.qcImageMins ?? job.qcMins ?? 0)}</span></div>
-            <div><strong>Special Officer Mins</strong><span>${formatMins(job.qcSentMins ?? job.specialMins ?? 0)}</span></div>
+            <div><strong>${getDisplayRoleLabel('officerQc')} Mins</strong><span>${formatMins(job.qcImageMins ?? job.qcMins ?? 0)}</span></div>
+            <div><strong>${getDisplayRoleLabel('specialOfficer')} Mins</strong><span>${formatMins(job.qcSentMins ?? job.specialMins ?? 0)}</span></div>
             <div><strong>Queue Position</strong><span>${job.queuePosition ?? '-'}</span></div>
             <div class="calendar-detail-wide"><strong>Processes</strong><span>${processes}</span></div>
         </div>
@@ -2492,7 +2519,7 @@ function renderAdminPerms() {
         
         grid.innerHTML += `
             <div style="background:var(--surface); padding:1rem; border:1px solid var(--border); border-radius:8px; margin-bottom:0.5rem;">
-                <strong>${m.name} (${m.role})</strong><br>
+                <strong>${m.name} (${getMemberRoleDisplay(m.role)})</strong><br>
                 <div style="margin-top:0.5rem; display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">${acceptToggle}<span style="flex:1 1 100%"></span>${options}</div>
             </div>
         `;
