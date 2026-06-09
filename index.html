@@ -157,6 +157,83 @@
                         </div>
 
                         <div class="form-grid-2">
+                            <div class="form-group">
+                                <label>Data Product Level</label>
+                                <select id="dataProductLevel" required>
+                                    <option value="" disabled selected>-- เลือก Data Product Level --</option>
+                                    <option value="Level 1A 1B 2B Primary OrthoStandard 2A">Level 1A 1B 2B Primary OrthoStandard 2A</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <input type="text" id="dataProductLevelOther" placeholder="ระบุ Data Product Level" style="display:none; margin-top:0.5rem;">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Reference</label>
+                                <select id="referenceType" required>
+                                    <option value="" disabled selected>-- เลือก Reference --</option>
+                                    <option value="Ortho กระทรวงเกษตรฯ 2545">Ortho กระทรวงเกษตรฯ 2545</option>
+                                    <option value="Field Survey">Field Survey</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <input type="text" id="referenceOther" placeholder="ระบุ Reference" style="display:none; margin-top:0.5rem;">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Coordinate System</label>
+                                <select id="coordinateSystem" required>
+                                    <option value="" disabled selected>-- เลือก Coordinate System --</option>
+                                    <option value="UTM">UTM</option>
+                                    <option value="GCS">GCS</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Datum</label>
+                                <select id="datumType" required>
+                                    <option value="" disabled selected>-- เลือก Datum --</option>
+                                    <option value="WGS84">WGS84</option>
+                                    <option value="Indian 1975">Indian 1975</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Datum Zone</label>
+                                <select id="datumZone" required>
+                                    <option value="" disabled selected>-- เลือก Datum Zone --</option>
+                                    <option value="47">47</option>
+                                    <option value="48">48</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <input type="text" id="datumZoneOther" placeholder="ระบุ Datum Zone" style="display:none; margin-top:0.5rem;">
+                            </div>
+
+                            <div class="form-group">
+                                <label>File Format</label>
+                                <select id="fileFormatType" required>
+                                    <option value="" disabled selected>-- เลือก File Format --</option>
+                                    <option value="GEOTIFF with TIF">GEOTIFF with TIF</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <input type="text" id="fileFormatOther" placeholder="ระบุ File Format" style="display:none; margin-top:0.5rem;">
+                            </div>
+
+                            <div class="form-group">
+                                <label>File Type</label>
+                                <select id="fileType" required>
+                                    <option value="" disabled selected>-- เลือก File Type --</option>
+                                    <option value="8 Bits , 16 Bits">8 Bits , 16 Bits</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <input type="text" id="fileTypeOther" placeholder="ระบุ File Type" style="display:none; margin-top:0.5rem;">
+                            </div>
+
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>Path Rawdata</label>
+                                <input type="text" id="pathRawdata" placeholder="กรอก path rawdata" required>
+                            </div>
+                        </div>
+
+                        <div class="form-grid-2">
                             <!-- 4. ประเภทงาน -->
                             <div class="form-group">
                                 <label>ประเภทงาน (Task Type)</label>

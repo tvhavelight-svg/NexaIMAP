@@ -312,6 +312,30 @@ function updateRateAvailability() {
     updateEstimatePreview();
 }
 
+function syncOtherSelectField(selectId, otherInputId) {
+    const selectEl = document.getElementById(selectId);
+    const otherEl = document.getElementById(otherInputId);
+    if(!selectEl || !otherEl) return;
+
+    const isOther = selectEl.value === 'Other';
+    otherEl.style.display = isOther ? 'block' : 'none';
+    otherEl.disabled = !isOther;
+    otherEl.required = isOther;
+    if(!isOther) otherEl.value = '';
+}
+
+function getOtherSelectValue(selectId, otherInputId, label) {
+    const selectEl = document.getElementById(selectId);
+    if(!selectEl) return '';
+    if(selectEl.value !== 'Other') return selectEl.value;
+
+    const otherValue = document.getElementById(otherInputId)?.value.trim();
+    if(!otherValue) {
+        throw new Error(`กรุณาระบุ ${label}`);
+    }
+    return otherValue;
+}
+
 // Process list follows agent.md. MAP and QC are not part of time estimation.
 const allSteps = [...PROCESS_KEYS];
 const empSteps = [...PROCESS_KEYS];
@@ -1723,6 +1747,19 @@ function setupOrderForm() {
     document.querySelectorAll('#orderForm input[type="radio"], #orderForm input[type="checkbox"]').forEach(input => {
         input.addEventListener('change', updateEstimatePreview);
     });
+    [
+        ['dataProductLevel', 'dataProductLevelOther'],
+        ['referenceType', 'referenceOther'],
+        ['datumZone', 'datumZoneOther'],
+        ['fileFormatType', 'fileFormatOther'],
+        ['fileType', 'fileTypeOther']
+    ].forEach(([selectId, otherId]) => {
+        const selectEl = document.getElementById(selectId);
+        if(selectEl) {
+            selectEl.addEventListener('change', () => syncOtherSelectField(selectId, otherId));
+            syncOtherSelectField(selectId, otherId);
+        }
+    });
     updateRateAvailability();
 
     document.getElementById('orderForm').onsubmit = (e) => {
@@ -1738,6 +1775,28 @@ function setupOrderForm() {
         
         const satellite = document.getElementById('orderSat').value;
         const imgCount = parseInt(document.getElementById('orderImgCount').value);
+        let dataProductLevel;
+        let reference;
+        let datumZone;
+        let fileFormatType;
+        let fileType;
+        try {
+            dataProductLevel = getOtherSelectValue('dataProductLevel', 'dataProductLevelOther', 'Data Product Level');
+            reference = getOtherSelectValue('referenceType', 'referenceOther', 'Reference');
+            datumZone = getOtherSelectValue('datumZone', 'datumZoneOther', 'Datum Zone');
+            fileFormatType = getOtherSelectValue('fileFormatType', 'fileFormatOther', 'File Format');
+            fileType = getOtherSelectValue('fileType', 'fileTypeOther', 'File Type');
+        } catch(err) {
+            alert(err.message || 'กรุณากรอกข้อมูลที่จำเป็นให้ครบ');
+            return;
+        }
+        const coordinateSystem = document.getElementById('coordinateSystem').value;
+        const datumType = document.getElementById('datumType').value;
+        const pathRawdata = document.getElementById('pathRawdata').value.trim();
+        if(!pathRawdata) {
+            alert('กรุณากรอก Path Rawdata');
+            return;
+        }
         
         // Collect form data
         const selectedSteps = getSelectedProcessesFromForm();
@@ -1827,6 +1886,14 @@ function setupOrderForm() {
             notes: [],
             createdAt: createdAt.toISOString(),
             status: 'ordered',
+            dataProductLevel,
+            reference,
+            coordinateSystem,
+            datum: datumType,
+            datumZone,
+            fileFormat: fileFormatType,
+            fileType,
+            pathRawdata,
             rawdataReady: document.querySelector('input[name="rawdataReady"]:checked')?.value || 'No',
             approver: document.getElementById('orderApprover').value,
             requestedBy: currentUser?.name || null
@@ -1837,6 +1904,17 @@ function setupOrderForm() {
 }
 
 function showOrderConfirm(draft) {
+    const extraRows = [
+        ['Data Product Level', draft.dataProductLevel],
+        ['Reference', draft.reference],
+        ['Coordinate System', draft.coordinateSystem],
+        ['Datum', draft.datum],
+        ['Datum Zone', draft.datumZone],
+        ['File Format', draft.fileFormat],
+        ['File Type', draft.fileType],
+        ['Path Rawdata', draft.pathRawdata]
+    ].map(([label, value]) => `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value || '-')}</p>`).join('');
+
     document.getElementById('ocBody').innerHTML = `
         <p><strong>Project:</strong> ${draft.name}</p>
         <p><strong>Satellite:</strong> ${draft.satellite}</p>
@@ -1848,6 +1926,9 @@ function showOrderConfirm(draft) {
             <p><strong>Queue Position:</strong> ${draft.queuePosition}</p>
             <p><strong>วาง Rawdata แล้ว:</strong> <span class="status-badge ${draft.rawdataReady === 'Yes' ? 'available' : 'busy'}">${draft.rawdataReady}</span></p>
             <p><strong>ผู้อนุมัติ:</strong> <span class="status-badge available">${draft.approver || '-'}</span></p>
+        </div>
+        <div style="margin: 1rem 0; padding: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
+            ${extraRows}
         </div>
         <p><strong>Selected Processes:</strong> ${draft.selectedProcesses.join(', ')}</p>
         <p><strong>Estimated Minutes:</strong> ${formatMins(draft.estimatedMinutes)} mins</p>
@@ -1862,6 +1943,13 @@ function showOrderConfirm(draft) {
         // Set default values back
         document.getElementById('orderYear').value = '69';
         document.getElementById('orderNum').value = '0001';
+        [
+            ['dataProductLevel', 'dataProductLevelOther'],
+            ['referenceType', 'referenceOther'],
+            ['datumZone', 'datumZoneOther'],
+            ['fileFormatType', 'fileFormatOther'],
+            ['fileType', 'fileTypeOther']
+        ].forEach(([selectId, otherId]) => syncOtherSelectField(selectId, otherId));
         updateRateAvailability();
         
         // Show summary/ใบสรุป
@@ -2012,6 +2100,14 @@ function buildOrderReceiptText(job) {
     lines.push(`Scenes: ${job.imgCount}`);
     lines.push(`Rawdata Ready: ${job.rawdataReady || '-'}`);
     lines.push(`Approver: ${job.approver || '-'}`);
+    lines.push(`Data Product Level: ${job.dataProductLevel || '-'}`);
+    lines.push(`Reference: ${job.reference || '-'}`);
+    lines.push(`Coordinate System: ${job.coordinateSystem || '-'}`);
+    lines.push(`Datum: ${job.datum || '-'}`);
+    lines.push(`Datum Zone: ${job.datumZone || '-'}`);
+    lines.push(`File Format: ${job.fileFormat || '-'}`);
+    lines.push(`File Type: ${job.fileType || '-'}`);
+    lines.push(`Path Rawdata: ${job.pathRawdata || '-'}`);
     lines.push(`Steps: ${(job.steps || []).join(', ')}`);
     lines.push('');
     lines.push(`${getDisplayRoleLabel('worker')}: ${job.worker || '-'} | ${formatDateOnly(job.workerStart)} - ${formatDateOnly(job.workerDeadline)} | ${formatMins(job.workerMins)} mins`);
@@ -2066,6 +2162,18 @@ function showOrderSummary(job) {
     const steps = (job.steps || []).join(', ');
     const createdLabel = new Date(job.createdAt).toLocaleString('th-TH');
     const finalDl = new Date(job.finalDeadline || job.deadline).toLocaleString('th-TH');
+    const detailRows = [
+        ['Data Product Level', job.dataProductLevel],
+        ['Reference', job.reference],
+        ['Coordinate System', job.coordinateSystem],
+        ['Datum', job.datum],
+        ['Datum Zone', job.datumZone],
+        ['File Format', job.fileFormat],
+        ['File Type', job.fileType],
+        ['Path Rawdata', job.pathRawdata]
+    ].map(([label, value]) => `
+        <div><div class="k">${escapeHtml(label)}</div><div class="v">${escapeHtml(value || '-')}</div></div>
+    `).join('');
 
     const employeeRow = {
         label: getDisplayRoleLabel('worker'),
@@ -2119,6 +2227,10 @@ function showOrderSummary(job) {
           <div><div class="k">Approver</div><div class="v">${escapeHtml(job.approver || '-')}</div></div>
         </div>
 
+        <div class="receipt-meta">
+          ${detailRows}
+        </div>
+
         <div class="receipt-block">
           <div class="k">Steps</div>
           <div class="v">${escapeHtml(steps)}</div>
@@ -2167,6 +2279,14 @@ function showOrderSummary(job) {
                 <div><strong>Scenes</strong><br>${escapeHtml(job.imgCount)}</div>
                 <div><strong>Rawdata Ready</strong><br>${escapeHtml(job.rawdataReady || '-')}</div>
                 <div><strong>Approver</strong><br>${escapeHtml(job.approver || '-')}</div>
+                <div><strong>Data Product Level</strong><br>${escapeHtml(job.dataProductLevel || '-')}</div>
+                <div><strong>Reference</strong><br>${escapeHtml(job.reference || '-')}</div>
+                <div><strong>Coordinate System</strong><br>${escapeHtml(job.coordinateSystem || '-')}</div>
+                <div><strong>Datum</strong><br>${escapeHtml(job.datum || '-')}</div>
+                <div><strong>Datum Zone</strong><br>${escapeHtml(job.datumZone || '-')}</div>
+                <div><strong>File Format</strong><br>${escapeHtml(job.fileFormat || '-')}</div>
+                <div><strong>File Type</strong><br>${escapeHtml(job.fileType || '-')}</div>
+                <div><strong>Path Rawdata</strong><br>${escapeHtml(job.pathRawdata || '-')}</div>
                 <div><strong>Final deadline</strong><br>${escapeHtml(finalDl)}</div>
               </div>
               <div><strong>Steps</strong><br>${escapeHtml(steps)}</div>
