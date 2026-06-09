@@ -876,9 +876,13 @@ function renderDashboard() {
     const empGrid = document.getElementById('employeesGrid');
     const offGrid = document.getElementById('officersGrid');
     const specialGrid = document.getElementById('specialOfficersGrid');
+    const salesGrid = document.getElementById('salesGrid');
+    const adminGrid = document.getElementById('adminGrid');
     empGrid.innerHTML = '';
     offGrid.innerHTML = '';
     if(specialGrid) specialGrid.innerHTML = '';
+    if(salesGrid) salesGrid.innerHTML = '';
+    if(adminGrid) adminGrid.innerHTML = '';
 
     members.forEach(m => {
         const proc = getMemberActiveProcess(m.name);
@@ -899,6 +903,8 @@ function renderDashboard() {
             </div>
         `;
         if(m.role === 'Employee') empGrid.innerHTML += cardHtml;
+        else if(m.role === 'User' && salesGrid) salesGrid.innerHTML += cardHtml;
+        else if(m.role === 'Admin' && adminGrid) adminGrid.innerHTML += cardHtml;
         else if(m.role === 'Special Officer' && specialGrid) specialGrid.innerHTML += cardHtml;
         else offGrid.innerHTML += cardHtml;
     });
