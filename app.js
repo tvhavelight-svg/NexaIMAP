@@ -1342,12 +1342,8 @@ function ensureChecklist(job, kind) {
     const defaults = (kind === 'officer') ? OFFICER_QC_CHECK_KEYS : SPECIAL_OFFICER_CHECK_KEYS;
     if(!job[key] || typeof job[key] !== 'object') job[key] = {};
     defaults.forEach(k => {
-        if(kind === 'officer') {
-            if(job[key][k] === true) job[key][k] = 'pass';
-            else if(job[key][k] === false || job[key][k] == null || !['pass', 'fail'].includes(job[key][k])) job[key][k] = 'pending';
-        } else {
-            if(job[key][k] !== true) job[key][k] = false;
-        }
+        if(job[key][k] === true) job[key][k] = 'pass';
+        else if(job[key][k] === false || job[key][k] == null || !['pass', 'fail'].includes(job[key][k])) job[key][k] = 'pending';
     });
     return job[key];
 }
@@ -1359,7 +1355,7 @@ function renderChecklist(job, kind, enabled) {
         ? `${getDisplayRoleLabel('officerQc')}: ตรวจสอบก่อนส่งต่อ`
         : `${getDisplayRoleLabel('specialOfficer')}: ตรวจสอบก่อน Approve`;
     const rowFn = (k) => {
-        if(kind === 'officer') {
+        if(kind === 'officer' || kind === 'special') {
             const passChecked = list[k] === 'pass' ? 'checked' : '';
             const failChecked = list[k] === 'fail' ? 'checked' : '';
             const dis = enabled ? '' : 'disabled';
@@ -1367,19 +1363,12 @@ function renderChecklist(job, kind, enabled) {
                 <div class="qc-eval-row">
                     <div class="qc-eval-label">${escapeHtml(k)}</div>
                     <div class="qc-eval-options">
-                        <label class="qc-eval-option pass"><input type="radio" name="qc-${job.id}-${escapeHtml(k)}" value="pass" ${passChecked} ${dis} onchange="officerChecklistToggle('${job.id}', '${escapeHtml(k)}', 'pass')"> ผ่าน</label>
-                        <label class="qc-eval-option fail"><input type="radio" name="qc-${job.id}-${escapeHtml(k)}" value="fail" ${failChecked} ${dis} onchange="officerChecklistToggle('${job.id}', '${escapeHtml(k)}', 'fail')"> ไม่ผ่าน</label>
+                        <label class="qc-eval-option pass"><input type="radio" name="qc-${job.id}-${escapeHtml(k)}" value="pass" ${passChecked} ${dis} onchange="${kind}ChecklistToggle('${job.id}', '${escapeHtml(k)}', 'pass')"> ผ่าน</label>
+                        <label class="qc-eval-option fail"><input type="radio" name="qc-${job.id}-${escapeHtml(k)}" value="fail" ${failChecked} ${dis} onchange="${kind}ChecklistToggle('${job.id}', '${escapeHtml(k)}', 'fail')"> ไม่ผ่าน</label>
                     </div>
                 </div>
             `;
         }
-
-        const checked = list[k] === true ? 'checked' : '';
-        const dis = enabled ? '' : 'disabled';
-        const onChange = enabled
-            ? `onchange="${kind}ChecklistToggle('${job.id}', '${escapeHtml(k)}', this.checked)"`
-            : '';
-        return `<label class="check-row"><input type="checkbox" ${checked} ${dis} ${onChange} /> <span>${escapeHtml(k)}</span></label>`;
     };
 
     return `
@@ -1388,7 +1377,7 @@ function renderChecklist(job, kind, enabled) {
         <div class="${kind === 'officer' ? 'qc-eval-grid' : 'check-grid'}">
           ${keys.map(rowFn).join('')}
         </div>
-        <div class="text-muted" style="margin-top:0.5rem;">เลือก <strong>ผ่าน / ไม่ผ่าน</strong> ให้ครบทั้ง 5 ข้อก่อนกด Commit ถ้ามีข้อใดไม่ผ่าน ระบบจะตีกลับไป ${getDisplayRoleLabel('worker')} ตอนกด Commit</div>
+        <div class="text-muted" style="margin-top:0.5rem;">เลือก <strong>ผ่าน / ไม่ผ่าน</strong> ให้ครบทุกข้อก่อนกด ${kind === 'officer' ? 'Commit' : 'Approve'} ถ้ามีข้อใดไม่ผ่าน ระบบจะตีกลับไป ${getDisplayRoleLabel('worker')} ตอนกด ${kind === 'officer' ? 'Commit' : 'Approve'}</div>
       </div>
     `;
 }
@@ -1415,7 +1404,7 @@ function specialChecklistToggle(jobId, key, checked) {
     const job = findJobById(jobId);
     if(!job) return;
     const list = ensureChecklist(job, 'special');
-    list[key] = !!checked;
+    list[key] = checked === 'pass' ? 'pass' : 'fail';
     job.specialOfficerChecklist = list;
     saveAppState();
     updateSpecialApproveEnabled(jobId);
@@ -1450,7 +1439,7 @@ function updateSpecialApproveEnabled(jobId) {
     const btn = document.getElementById(`specialApproveBtn-${jobId}`);
     if(!job || !btn) return;
     const list = ensureChecklist(job, 'special');
-    btn.disabled = !isAllChecked(list, SPECIAL_OFFICER_CHECK_KEYS);
+    btn.disabled = !isAllEvaluated(list, SPECIAL_OFFICER_CHECK_KEYS);
 }
 
 function officerSendBackToProcessing(jobId, failedKey) {
@@ -1473,6 +1462,31 @@ function officerSendBackToProcessing(jobId, failedKey) {
 
     saveAppState();
     notifyUserOfJob(job.worker, job.id, 'งานถูกตีกลับจาก QC', `${job.name} มีรายการที่ไม่ผ่าน (${failedKey}) กรุณาแก้ไขแล้วส่งใหม่`);
+    renderMyWork();
+    renderDashboard();
+}
+
+function specialSendBackToProcessing(jobId, failedKey) {
+    const job = findJobById(jobId);
+    if(!job) return;
+
+    job.status = 'working';
+    job.returnedBySpecialAt = new Date().toISOString();
+    job.reworkRequired = true;
+    job.reworkStage = 'special';
+    job.qcPassedAt = null;
+    job.specialFeedback = Array.isArray(job.specialFeedback) ? job.specialFeedback : [];
+    job.specialFeedback.push({
+        date: new Date().toISOString(),
+        message: `Pre-Shipment Inspection ไม่ผ่าน: ${failedKey}`
+    });
+
+    if(job.specialOfficerChecklist && typeof job.specialOfficerChecklist === 'object') {
+        job.specialOfficerChecklist = {};
+    }
+
+    saveAppState();
+    notifyUserOfJob(job.worker, job.id, 'งานถูกตีกลับจาก Pre-Shipment Inspection', `${job.name} มีรายการที่ไม่ผ่าน (${failedKey}) กรุณาแก้ไขแล้วส่งใหม่`);
     renderMyWork();
     renderDashboard();
 }
@@ -1501,8 +1515,14 @@ function specialOfficerApprove(jobId) {
     const job = findJobById(jobId);
     if(!job) return;
     const list = ensureChecklist(job, 'special');
-    if(!isAllChecked(list, SPECIAL_OFFICER_CHECK_KEYS)) {
-        alert(`กรุณาติ๊ก ${getDisplayRoleLabel('specialOfficer')} ให้ครบทุกข้อก่อน Approve`);
+    if(!isAllEvaluated(list, SPECIAL_OFFICER_CHECK_KEYS)) {
+        alert(`กรุณาเลือก ผ่าน / ไม่ผ่าน ให้ครบทุกข้อก่อนกด Approve`);
+        return;
+    }
+
+    const failedKey = SPECIAL_OFFICER_CHECK_KEYS.find(k => list[k] === 'fail');
+    if(failedKey) {
+        specialSendBackToProcessing(jobId, failedKey);
         return;
     }
     job.specialCommittedAt = new Date().toISOString();
