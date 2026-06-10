@@ -956,6 +956,20 @@ function renderMyWork() {
     myJobs.forEach((job, index) => {
         let notesHtml = (job.notes || []).map(n => `<div class="work-note">โน้ต: ${n}</div>`).join('');
         let qcFeedbackHtml = (job.qcFeedback || []).map(f => `<div class="work-note" style="border-left-color:var(--red-text);">QC ไม่ผ่าน: ${f.message} (${new Date(f.date).toLocaleString()})</div>`).join('');
+        let specialFeedbackHtml = (job.specialFeedback || []).map(f => `<div class="work-note" style="border-left-color:var(--red-text);">Pre-Shipment Inspection ไม่ผ่าน: ${f.message} (${new Date(f.date).toLocaleString()})</div>`).join('');
+        let rejectSummaryHtml = '';
+        if(job.reworkRequired) {
+            const latestReject = job.reworkStage === 'special'
+                ? (job.specialFeedback || []).slice(-1)[0]
+                : (job.qcFeedback || []).slice(-1)[0];
+            if(latestReject) {
+                rejectSummaryHtml = `
+                    <div class="work-note" style="border-left-color:var(--red-text);">
+                        ตีกลับจาก ${escapeHtml(job.reworkStage === 'special' ? getDisplayRoleLabel('specialOfficer') : getDisplayRoleLabel('officerQc'))}: ${escapeHtml(latestReject.message)}
+                    </div>
+                `;
+            }
+        }
         const workerReceiptHtml = renderWorkerOrderDetail(job);
 
         // Officers can be assigned as Worker too. Determine "my role for this job" by assignment, not by account role.
@@ -997,7 +1011,7 @@ function renderMyWork() {
                     <button class="btn btn-outline" onclick="markWorkUpdated('${job.id}')">Update Work</button>
                     <button class="btn btn-primary" onclick="workerCommitToQC('${job.id}')">${job.reworkRequired ? 'ส่งตรวจใหม่ (QC)' : 'Commit ส่งตรวจ (QC)'}</button>
                 `;
-                bodyBlock = `${workerReceiptHtml}${renderWorkerCommitBlock(job)}`;
+                bodyBlock = `${workerReceiptHtml}${rejectSummaryHtml}${renderWorkerCommitBlock(job)}`;
             } else if(job.status === 'special_check') {
                 actionButtons = `<span style="color:var(--green-text);">✓ งานอนุมัติแล้ว รอแจ้งผู้สั่งงาน</span>`;
             } else if(job.status === 'completed') {
@@ -1016,7 +1030,7 @@ function renderMyWork() {
                 // After render, update button enabled state
                 setTimeout(() => updateOfficerCommitEnabled(job.id), 0);
             } else if(job.status === 'working' && job.reworkStage === 'officer') {
-                bodyBlock = `${renderWorkerOrderDetail(job)}<div class="text-muted" style="margin-top:0.75rem;">งานนี้ถูกตีกลับไป ${getDisplayRoleLabel('worker')} แล้ว</div>`;
+                bodyBlock = `${renderWorkerOrderDetail(job)}${rejectSummaryHtml}<div class="text-muted" style="margin-top:0.75rem;">งานนี้ถูกตีกลับไป ${getDisplayRoleLabel('worker')} แล้ว</div>`;
                 actionButtons = `<span style="color:var(--text-muted);">รอ ${getDisplayRoleLabel('worker')} แก้ไขและส่งใหม่</span>`;
             }
         } else if(isMySpecial) {
@@ -1027,6 +1041,9 @@ function renderMyWork() {
                         <button class="btn btn-outline" onclick="openStageReject('special','${job.id}')" style="color:var(--red-text);">Reject</button>
                       `;
                 setTimeout(() => updateSpecialApproveEnabled(job.id), 0);
+            } else if(job.status === 'working' && job.reworkStage === 'special') {
+                bodyBlock = `${renderWorkerOrderDetail(job)}${rejectSummaryHtml}<div class="text-muted" style="margin-top:0.75rem;">งานนี้ถูกตีกลับไป ${getDisplayRoleLabel('worker')} แล้ว</div>`;
+                actionButtons = `<span style="color:var(--text-muted);">รอ ${getDisplayRoleLabel('worker')} แก้ไขและส่งใหม่</span>`;
             }
         }
         
@@ -1039,6 +1056,7 @@ function renderMyWork() {
                 <p><strong>Role:</strong> ${roleLabel} | <strong>Minutes:</strong> ${formatMins(mins)} | <strong>Images:</strong> ${job.imgCount}</p>
                 <p><strong>Steps:</strong> ${job.steps.join(', ')}</p>
                 ${qcFeedbackHtml}
+                ${specialFeedbackHtml}
                 ${notesHtml}
                 ${bodyBlock}
 
