@@ -86,14 +86,8 @@ function loadFromFirestore() {
             };
             ['sale1','sale2','sale3','sale4','sale5'].forEach(ensureUser);
             
-            // Restore current user
-            if(data.currentUserName) {
-                currentUser = members.find(m => m.name === data.currentUserName) || null;
-            }
-            if(!currentUser) {
-                const defaultEmployee = members.find(m => m.role === 'Employee');
-                if(defaultEmployee) currentUser = defaultEmployee;
-            }
+            // Auto-restore disabled — always show login screen
+            currentUser = null;
             
             console.log('✓ Synced from Firestore:', jobs.length, 'jobs');
             
