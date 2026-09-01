@@ -390,14 +390,164 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); border-color: tr
 }
 
 /* Login */
+/* ── Login Screen: Orbital Glass ── */
 .overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: var(--bg); display: none; justify-content: center; align-items: center; z-index: 2000;
+    background: #071420;
+    background-image:
+        radial-gradient(ellipse at 20% 80%, rgba(0,180,120,0.13) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(0,100,200,0.16) 0%, transparent 50%);
+    display: none; justify-content: center; align-items: center; z-index: 2000;
+    overflow: hidden;
 }
 .overlay.active { display: flex; }
-.login-card { background: var(--surface); padding: 2rem; border-radius: 12px; box-shadow: 0 10px 30px var(--shadow); text-align: center; width: 100%; max-width: 400px; }
-.login-logo { margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; color: var(--accent-dark); }
-.error-msg { color: var(--red-text); margin-top: 1rem; font-size: 0.9rem; }
+
+/* Orbital rings */
+.login-orb {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid;
+    top: 50%; left: 50%;
+    pointer-events: none;
+}
+.login-orb-1 {
+    width: 700px; height: 260px;
+    border-color: rgba(0,200,150,0.09);
+    transform: translate(-50%, -50%) rotate(-18deg);
+}
+.login-orb-2 {
+    width: 500px; height: 185px;
+    border-color: rgba(0,130,210,0.11);
+    transform: translate(-50%, -50%) rotate(-18deg);
+}
+.login-orb-3 {
+    width: 280px; height: 105px;
+    border-color: rgba(0,220,180,0.13);
+    transform: translate(-50%, -50%) rotate(-18deg);
+}
+
+/* Glass card */
+.login-card {
+    background: rgba(255,255,255,0.055);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 22px;
+    padding: 2.4rem 2.2rem 2.2rem;
+    width: 100%;
+    max-width: 320px;
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    position: relative; z-index: 2;
+}
+
+/* Logo + brand row */
+.login-top-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.4rem;
+}
+.login-gistda-logo {
+    width: 72px;
+    flex-shrink: 0;
+    filter: brightness(0) invert(1);
+}
+.login-vert-rule {
+    width: 1px;
+    height: 46px;
+    background: rgba(255,255,255,0.16);
+    flex-shrink: 0;
+}
+.login-brand-name {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #e0f2fe;
+    letter-spacing: 2px;
+    line-height: 1;
+}
+.login-brand-sub {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.58rem;
+    font-weight: 500;
+    color: rgba(100,220,200,0.55);
+    letter-spacing: 2.5px;
+    margin-top: 4px;
+}
+
+/* Chip */
+.login-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,200,150,0.1);
+    border: 1px solid rgba(0,200,150,0.22);
+    border-radius: 20px;
+    padding: 0.22rem 0.7rem;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: rgba(0,220,180,0.75);
+    margin-bottom: 1.5rem;
+}
+.login-chip-dot {
+    display: inline-block;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: #00c896;
+    flex-shrink: 0;
+}
+
+/* Field labels */
+.login-field-label {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: rgba(150,200,220,0.55);
+    margin-bottom: 0.3rem;
+}
+
+/* Form inputs */
+#loginForm input {
+    display: block;
+    width: 100%;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 9px;
+    padding: 0.65rem 0.9rem;
+    color: #c8e6f0;
+    font-family: 'Nunito Sans', sans-serif;
+    font-size: 0.88rem;
+    margin-bottom: 1.1rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+#loginForm input:focus {
+    border-color: rgba(0,200,150,0.4);
+}
+#loginForm input::placeholder { color: rgba(150,200,220,0.3); }
+
+/* Submit button */
+#loginForm button[type="submit"] {
+    display: block;
+    width: 100%;
+    padding: 0.76rem;
+    background: linear-gradient(90deg, #00836b, #0076c0);
+    border: none;
+    border-radius: 9px;
+    color: #fff;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    cursor: pointer;
+    margin-top: 0.2rem;
+    transition: opacity 0.2s;
+}
+#loginForm button[type="submit"]:hover { opacity: 0.88; }
+
+.error-msg { color: rgba(255,130,130,0.85); margin-top: 0.8rem; font-size: 0.82rem; font-family: 'Nunito Sans', sans-serif; text-align: center; }
 
 /* Order Form */
 .order-form-card { background: var(--surface); padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px var(--shadow); margin-top: 1rem; max-width: 800px; }
