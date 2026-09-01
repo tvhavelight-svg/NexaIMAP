@@ -177,9 +177,9 @@ window.addMinutes = function(date, mins) {
     return next;
 };
 
-// Auto-start after page loads
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() { setTimeout(initLocalMode, 500); });
-} else {
-    setTimeout(initLocalMode, 500);
-}
+// Auto-start disabled — show login screen instead
+// if (document.readyState === 'loading') {
+//     document.addEventListener('DOMContentLoaded', function() { setTimeout(initLocalMode, 500); });
+// } else {
+//     setTimeout(initLocalMode, 500);
+// }
