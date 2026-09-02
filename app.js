@@ -26,7 +26,7 @@ function getDisplayRoleLabel(kind) {
 function getMemberRoleDisplay(role) {
     if(role === 'Officer') return getDisplayRoleLabel('officerQc');
     if(role === 'Special Officer') return getDisplayRoleLabel('specialOfficer');
-    if(role === 'Processing') return 'Processing';
+    if(role === 'Processing' || role === 'Employee') return 'Processing';
     if(role === 'User') return 'User';
     if(role === 'Admin') return 'Admin';
     return role;
@@ -71,6 +71,12 @@ function loadFromFirestore() {
             members = members.map(member => {
                 if(typeof member.acceptJobs === 'boolean') return member;
                 return { ...member, acceptJobs: true };
+            });
+
+            // Normalize legacy role name from Firestore
+            members = members.map(member => {
+                if(member.role === 'Employee') return { ...member, role: 'Processing' };
+                return member;
             });
             
             // Ensure admin user exists
