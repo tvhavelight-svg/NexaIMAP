@@ -38,7 +38,7 @@ const allSteps = [...PROCESS_KEYS];
 const empSteps = [...PROCESS_KEYS];
 
 window.initialMembers = [
-    // Employees start with no permissions; must be ticked in Manage Permissions.
+    // Processing start with no permissions; must be ticked in Manage Permissions.
     { name: 'joy', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
     { name: 'bboy', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
     { name: 'oil', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },

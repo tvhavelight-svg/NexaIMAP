@@ -345,7 +345,7 @@ const initialMembers = [
     { name: 'sale4', role: 'User', allowed: [], acceptJobs: false, status: 'Available', mins: 0, forceStatus: null },
     { name: 'sale5', role: 'User', allowed: [], acceptJobs: false, status: 'Available', mins: 0, forceStatus: null },
     
-    // Employees (7) - start with no permissions; must be ticked in Manage Permissions.
+    // Processing (7) - start with no permissions; must be ticked in Manage Permissions.
     { name: 'joy', role: 'Employee', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
     { name: 'bboy', role: 'Employee', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
     { name: 'oil', role: 'Employee', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
