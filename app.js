@@ -26,7 +26,7 @@ function getDisplayRoleLabel(kind) {
 function getMemberRoleDisplay(role) {
     if(role === 'Officer') return getDisplayRoleLabel('officerQc');
     if(role === 'Special Officer') return getDisplayRoleLabel('specialOfficer');
-    if(role === 'Employee') return 'Employee';
+    if(role === 'Processing') return 'Processing';
     if(role === 'User') return 'User';
     if(role === 'Admin') return 'Admin';
     return role;
@@ -346,13 +346,13 @@ const initialMembers = [
     { name: 'sale5', role: 'User', allowed: [], acceptJobs: false, status: 'Available', mins: 0, forceStatus: null },
     
     // Processing (7) - start with no permissions; must be ticked in Manage Permissions.
-    { name: 'joy', role: 'Employee', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
-    { name: 'bboy', role: 'Employee', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
-    { name: 'oil', role: 'Employee', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
-    { name: 'june', role: 'Employee', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
-    { name: 'phaifah', role: 'Employee', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
-    { name: 'aunaun', role: 'Employee', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
-    { name: 'nine', role: 'Employee', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'joy', role: 'Processing', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'bboy', role: 'Processing', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'oil', role: 'Processing', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'june', role: 'Processing', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'phaifah', role: 'Processing', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'aunaun', role: 'Processing', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
+    { name: 'nine', role: 'Processing', allowed: [], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
     
     // Special Officer for QC:SENT
     { name: 'toom', role: 'Special Officer', allowed: ['QC:SENT'], acceptJobs: true, status: 'Available', mins: 0, forceStatus: null },
@@ -537,7 +537,7 @@ function recalculateMembers() {
 
 function queueWorker(step, excludeName = null, isQC = false) {
     let candidates = members.filter(m => 
-        (m.role === 'Employee' || m.role === 'Officer') &&
+        (m.role === 'Processing' || m.role === 'Officer') &&
         m.status !== 'Offline' && 
         m.acceptJobs !== false &&
         m.allowed.includes(step) &&
@@ -571,7 +571,7 @@ function queueWorkerForSteps(steps, excludeName = null) {
     if(requiredSteps.length === 0) return null;
 
     let candidates = members.filter(member =>
-        (member.role === 'Employee' || member.role === 'Officer') &&
+        (member.role === 'Processing' || member.role === 'Officer') &&
         member.status === 'Available' &&
         member.status !== 'Offline' &&
         member.acceptJobs !== false &&
@@ -920,7 +920,7 @@ function renderDashboard() {
                 ${procHtml}
             </div>
         `;
-        if(m.role === 'Employee') empGrid.innerHTML += cardHtml;
+        if(m.role === 'Processing') empGrid.innerHTML += cardHtml;
         else if(m.role === 'User' && salesGrid) salesGrid.innerHTML += cardHtml;
         else if(m.role === 'Admin' && adminGrid) adminGrid.innerHTML += cardHtml;
         else if(m.role === 'Special Officer' && specialGrid) specialGrid.innerHTML += cardHtml;
@@ -935,7 +935,7 @@ function renderMyWork() {
     const list = document.getElementById('myWorkList');
     list.innerHTML = '';
     
-    const myJobs = currentUser.role === 'Employee'
+    const myJobs = currentUser.role === 'Processing'
         ? jobs.filter(j => j.worker === currentUser.name)
         : currentUser.role === 'Officer'
             ? jobs.filter(j => j.worker === currentUser.name || j.qcOfficer === currentUser.name || j.qc === currentUser.name)
@@ -1647,13 +1647,13 @@ function overlapsRange(start, end, rangeStart, rangeEnd) {
 // STATUS
 // ==========================================
 function getMemberActiveProcess(memberName) {
-    // Employee primary work
+    // Processing primary work
     const asWorker = jobs.find(j => (j.worker === memberName) && (j.status === 'ordered' || j.status === 'working'));
     if(asWorker) {
         const label = asWorker.status === 'ordered'
             ? `รอเริ่มงาน: ${getDisplayRoleLabel('worker')}`
             : getDisplayRoleLabel('worker');
-        return { label, jobName: asWorker.name, role: 'Employee' };
+        return { label, jobName: asWorker.name, role: 'Processing' };
     }
 
     // Officer QC work
@@ -1751,7 +1751,7 @@ function renderCalendar() {
         calendarJobs.push({
             job,
             type: 'employee',
-            label: 'Employee',
+            label: 'Processing',
             name: job.worker || '-',
             start: toStartOfDay(timeline.workerStart),
             end: toStartOfDay(timeline.workerEnd)

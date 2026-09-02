@@ -39,13 +39,13 @@ const empSteps = [...PROCESS_KEYS];
 
 window.initialMembers = [
     // Processing start with no permissions; must be ticked in Manage Permissions.
-    { name: 'joy', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'bboy', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'oil', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'june', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'phaifah', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'aunaun', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
-    { name: 'nine', role: 'Employee', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'joy', role: 'Processing', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'bboy', role: 'Processing', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'oil', role: 'Processing', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'june', role: 'Processing', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'phaifah', role: 'Processing', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'aunaun', role: 'Processing', allowed: [], status: 'Available', mins: 0, forceStatus: null },
+    { name: 'nine', role: 'Processing', allowed: [], status: 'Available', mins: 0, forceStatus: null },
     // Special Officer for QC:SENT
     { name: 'toom', role: 'Special Officer', allowed: ['QC:SENT'], status: 'Available', mins: 0, forceStatus: null },
     // Officers - default to all permissions + QC.
@@ -61,13 +61,13 @@ window.initialMembers = [
 window.members = JSON.parse(JSON.stringify(window.initialMembers));
 window.jobs = [];
 window.archivedJobs = [];
-window.currentUser = { name: 'joy', role: 'Employee' };
+window.currentUser = { name: 'joy', role: 'Processing' };
 
 function initLocalMode() {
     if (document.getElementById('loadingScreen')) document.getElementById('loadingScreen').classList.remove('active');
     if (document.getElementById('loginScreen')) document.getElementById('loginScreen').classList.remove('active');
     if (document.getElementById('app')) document.getElementById('app').style.display = 'block';
-    if (document.getElementById('currentUserDisplay')) document.getElementById('currentUserDisplay').textContent = '👤 JOY (Employee)';
+    if (document.getElementById('currentUserDisplay')) document.getElementById('currentUserDisplay').textContent = '👤 JOY (Processing)';
     if (document.getElementById('adminBtn')) document.getElementById('adminBtn').style.display = 'block';
     if (document.getElementById('resetBtn')) document.getElementById('resetBtn').style.display = 'block';
     
